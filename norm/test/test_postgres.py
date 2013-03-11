@@ -27,7 +27,7 @@ class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
         if not url:
             raise SkipTest('You must define NORM_POSTGRESQL_URL in order to do '
                            'testing against a postgres database.  It should be '
-                           'in the format XXX')
+                           'in the format user:password@host:port/database')
         parsed = urlparse(url)
         kwargs = {
             'user': parsed.username,
