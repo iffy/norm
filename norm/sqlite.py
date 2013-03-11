@@ -14,12 +14,37 @@ class SyncTranslator(object):
 
 
     def translate(self, operation):
-        return self.translate_Insert(operation)
+        handler = getattr(self, 'translate_'+operation.op_name, None)
+        return handler(operation)
 
 
-    def translate_Insert(self, operation):
+    def translate_sql(self, operation):
         def f(x):
-            x.execute('insert into %s default values' % (operation.table,))
+            x.execute(operation.sql, operation.args)
+            rows = x.fetchall()
+            return rows
+        return f
+
+
+    def translate_insert(self, operation):
+        def f(x):
+            sqls = ['INSERT INTO %s' % (operation.table,)]
+            args = []
+            if operation.columns:
+                names = []
+                values = []
+                for k,v in operation.columns:
+                    names.append(k)
+                    values.append('?')
+                    args.append(v)
+                sqls.append('(%s) values (%s)' % (
+                    ','.join(names),
+                    ','.join(values),
+                ))
+            else:
+                sqls.append('DEFAULT VALUES')
+            sql = ' '.join(sqls)
+            x.execute(sql, tuple(args))
             return x.lastrowid
         return f
 
@@ -39,4 +64,5 @@ class SyncRunner(object):
 
     def run(self, func):
         cursor = self.conn.cursor()
-        return func(cursor)
+        result = func(cursor)
+        return result

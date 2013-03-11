@@ -1,4 +1,13 @@
-from zope.interface import Interface
+from zope.interface import Interface, Attribute
+
+
+
+class IOperation(Interface):
+    """
+    An atomic operation
+    """
+
+    op_name = Attribute("""A unique name for this operation""")
 
 
 

@@ -2,6 +2,11 @@
 SQL operations
 """
 
+from zope.interface import implements
+
+from norm.interface import IOperation
+
+
 
 class Insert(object):
     """
@@ -9,5 +14,25 @@ class Insert(object):
     primary key.
     """
 
-    def __init__(self, table):
+    implements(IOperation)
+    op_name = 'insert'
+
+
+    def __init__(self, table, columns=None):
         self.table = table
+        self.columns = columns
+
+
+
+class SQL(object):
+    """
+    Execute some SQL
+    """
+
+    implements(IOperation)
+    op_name = 'sql'
+
+
+    def __init__(self, sql, args=None):
+        self.sql = sql
+        self.args = args or ()
