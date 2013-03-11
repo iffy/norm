@@ -18,6 +18,10 @@ class SyncTranslator(object):
         return handler(operation)
 
 
+    def translateParams(self, sql):
+        return sql
+
+
     def translate_sql(self, operation):
         def f(x):
             x.execute(operation.sql, operation.args)

@@ -46,11 +46,13 @@ class TranslateRunnerTestMixin(object):
         defer.returnValue(AllInOneRunner(translator, runner))
 
 
+    @defer.inlineCallbacks
     def test_IRunner(self):
         runner = yield self.getRunner()
         verifyObject(IRunner, runner)
 
 
+    @defer.inlineCallbacks
     def test_ITranslator(self):
         translator = yield self.getTranslator()
         verifyObject(ITranslator, translator)

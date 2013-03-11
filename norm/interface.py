@@ -22,6 +22,13 @@ class ITranslator(Interface):
         """
 
 
+    def translateParams(sql):
+        """
+        Convert an SQL statement using ? to an SQL statement more appropriate
+        for the database being translated to.
+        """
+
+
 
 class IRunner(Interface):
     """
