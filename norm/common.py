@@ -87,3 +87,21 @@ class SyncRunner(object):
         cursor = self.conn.cursor()
         result = func(cursor)
         return result
+
+
+
+class AdbapiRunner(object):
+    """
+    I run synchronous database operation in threads using
+    C{twisted.enterprise.adbapi}.
+    """
+
+    implements(IRunner)
+
+
+    def __init__(self, pool):
+        self.pool = pool
+
+
+    def run(self, func):
+        return self.pool.runInteraction(func)
