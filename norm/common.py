@@ -61,7 +61,8 @@ class SyncTranslator(object):
         def f(x):
             sql, args = self.constructInsert(operation)
             x.execute(self.translateParams(sql), tuple(args))
-            return self.getLastRowId(x, operation)
+            if operation.lastrowid:
+                return self.getLastRowId(x, operation)
         return f
 
 

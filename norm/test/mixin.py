@@ -71,7 +71,7 @@ class TranslateRunnerTestMixin(object):
         You can Insert a record and get the last insert row id out.
         """
         e = yield self.getExecutor()        
-        result = yield e.run(Insert('foo'))
+        result = yield e.run(Insert('foo', lastrowid=True))
         self.assertEqual(result, 1, "Should return the primary key")
 
 
@@ -82,13 +82,24 @@ class TranslateRunnerTestMixin(object):
         """
         e = yield self.getExecutor()
 
-        result = yield e.run(Insert('foo', [('name', 'something')]))
+        result = yield e.run(Insert('foo', [('name', 'something')], lastrowid=True))
         self.assertEqual(result, 1, "Should return the primary key")
 
         rows = yield e.run(SQL('select id, name from foo'))
         self.assertEqual(rows, [
             (1, 'something'),
         ])
+
+
+    @defer.inlineCallbacks
+    def test_Insert_lastrowidOptional(self):
+        """
+        You can have the last row id not be returned
+        """
+        e = yield self.getExecutor()
+
+        result = yield e.run(Insert('foo', [('name', 'something')], lastrowid=False))
+        self.assertEqual(result, None, "Should not return the last row id")
 
 
     @defer.inlineCallbacks

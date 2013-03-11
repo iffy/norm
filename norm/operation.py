@@ -18,10 +18,16 @@ class Insert(object):
     op_name = 'insert'
 
 
-    def __init__(self, table, columns=None, id_column=None):
+    def __init__(self, table, columns=None, lastrowid=False):
+        """
+        @param table: table name to insert into.
+        @param columns: A list of 2-tuples of the form (column_name,value).
+        @param lastrowid: If C{True}, then the last insert row id should be
+            returned when I am run.
+        """
         self.table = table
         self.columns = columns
-        self.id_column = id_column
+        self.lastrowid = lastrowid
 
 
 
