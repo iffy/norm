@@ -8,34 +8,35 @@ from urlparse import urlparse
 
 import os
 psycopg2 = None
-skip_psycopg2_reason = None
+conn_args = None
 
 try:
     import psycopg2
 except ImportError:
-    skip_psycopg2_reason = 'psycopg2 not installed'
+    pass
 
+
+def getConnArgs():
+    url = os.environ.get('NORM_POSTGRESQL_URL', None)
+    if not url:
+        raise SkipTest('You must define NORM_POSTGRESQL_URL in order to do '
+                       'testing against a postgres database.  It should be '
+                       'in the format user:password@host:port/database')
+    parsed = urlparse(url)
+    return {
+        'user': parsed.username,
+        'password': parsed.password,
+        'port': parsed.port,
+        'host': parsed.hostname,
+        'database': parsed.path.lstrip('/')
+    }
 
 
 class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
-    skip = skip_psycopg2_reason
-
 
     def getConnection(self):
-        url = os.environ.get('NORM_POSTGRESQL_URL', None)
-        if not url:
-            raise SkipTest('You must define NORM_POSTGRESQL_URL in order to do '
-                           'testing against a postgres database.  It should be '
-                           'in the format user:password@host:port/database')
-        parsed = urlparse(url)
-        kwargs = {
-            'user': parsed.username,
-            'password': parsed.password,
-            'port': parsed.port,
-            'host': parsed.hostname,
-            'database': parsed.path.lstrip('/')
-        }
+        kwargs = getConnArgs()
         db = psycopg2.connect(**kwargs)
         c = db.cursor()
         c.execute('''create table foo (
@@ -70,4 +71,25 @@ class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
         """
         trans = PostgresSyncTranslator()
         self.assertEqual(trans.translateParams('select ?'), 'select %s')
+
+
+class PostgresAdbapiTest(TranslateRunnerTestMixin, TestCase):
+
+
+    def getRunner(self):
+        kwargs = getConnArgs()
+        cpool = adbapi.ConnectionPool('psycopg2', **kwargs)
+        runner = AdbapiRunner(cpool)
+        def setup(x):
+            x.execute('''create table foo (
+                id integer primary key,
+                name text
+            )''')
+        return cpool.runInteraction(setup).addCallback(lambda _:runner)
+
+
+    def getTranslator(self):
+        return PostgresSyncTranslator()
+
+
 
