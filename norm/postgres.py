@@ -19,7 +19,7 @@ class SyncTranslator(object):
 
 
     def translateParams(self, sql):
-        return sql
+        return sql.replace('?', '%s')
 
 
     def translate_sql(self, operation):
