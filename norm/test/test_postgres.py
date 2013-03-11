@@ -1,7 +1,8 @@
 from twisted.trial.unittest import TestCase, SkipTest
+from twisted.enterprise import adbapi
 
 from norm.postgres import PostgresSyncTranslator
-from norm.common import SyncRunner
+from norm.common import SyncRunner, AdbapiRunner
 from norm.test.mixin import TranslateRunnerTestMixin
 
 from urlparse import urlparse
