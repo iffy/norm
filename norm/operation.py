@@ -18,9 +18,10 @@ class Insert(object):
     op_name = 'insert'
 
 
-    def __init__(self, table, columns=None):
+    def __init__(self, table, columns=None, id_column=None):
         self.table = table
         self.columns = columns
+        self.id_column = id_column
 
 
 

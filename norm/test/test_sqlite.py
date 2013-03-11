@@ -21,7 +21,6 @@ class SqliteSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
     def getConnection(self):
         db = sqlite.connect(':memory:')
-        #db.row_factory = sqlite.Row
         db.execute('''create table foo (
             id integer primary key,
             name text

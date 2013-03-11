@@ -11,6 +11,14 @@ class PostgresSyncTranslator(SyncTranslator):
     paramstyle = '%s'
 
 
+    def maybeGetResults(self, cursor, operation):
+        try:
+            return cursor.fetchall()
+        except:
+            return []
+
+
     def getLastRowId(self, cursor, operation):
-        return cursor.lastrowid
+        cursor.execute('select lastval()')
+        return cursor.fetchone()[0]
 
