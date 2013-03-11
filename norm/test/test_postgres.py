@@ -1,6 +1,7 @@
 from twisted.trial.unittest import TestCase, SkipTest
 
-from norm.postgres import SyncTranslator, SyncRunner
+from norm.postgres import PostgresSyncTranslator
+from norm.common import SyncRunner
 from norm.test.mixin import TranslateRunnerTestMixin
 
 from urlparse import urlparse
@@ -16,7 +17,7 @@ except ImportError:
 
 
 
-class SyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
+class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
     skip = skip_psycopg2_reason
 
@@ -60,13 +61,13 @@ class SyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getTranslator(self):
-        return SyncTranslator()
+        return PostgresSyncTranslator()
 
 
     def test_translateParams(self):
         """
         Should make ? into %s
         """
-        trans = SyncTranslator()
+        trans = PostgresSyncTranslator()
         self.assertEqual(trans.translateParams('select ?'), 'select %s')
 

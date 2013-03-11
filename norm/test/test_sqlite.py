@@ -1,6 +1,7 @@
 from twisted.trial.unittest import TestCase
 
-from norm.sqlite import SyncTranslator, SyncRunner
+from norm.sqlite import SqliteSyncTranslator
+from norm.common import SyncRunner
 from norm.test.mixin import TranslateRunnerTestMixin
 
 
@@ -15,7 +16,7 @@ except ImportError:
 
 
 
-class SyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
+class SqliteSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getConnection(self):
@@ -33,13 +34,13 @@ class SyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getTranslator(self):
-        return SyncTranslator()
+        return SqliteSyncTranslator()
 
 
     def test_translateParams(self):
         """
         Should leave ? alone
         """
-        trans = SyncTranslator()
+        trans = SqliteSyncTranslator()
         self.assertEqual(trans.translateParams('select ?'), 'select ?')
 

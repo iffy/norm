@@ -1,72 +1,16 @@
-from zope.interface import implements
-
-from norm.interface import ITranslator, IRunner
+from norm.common import SyncTranslator
 
 
 
-class SyncTranslator(object):
+class SqliteSyncTranslator(SyncTranslator):
     """
     I translate SQL database operations into blocking functions for an SQLite
     connection.
     """
 
-    implements(ITranslator)
+    paramstyle = '?'
 
 
-    def translate(self, operation):
-        handler = getattr(self, 'translate_'+operation.op_name, None)
-        return handler(operation)
+    def getLastRowId(self, cursor, operation):
+        return cursor.lastrowid
 
-
-    def translateParams(self, sql):
-        return sql
-
-
-    def translate_sql(self, operation):
-        def f(x):
-            x.execute(operation.sql, operation.args)
-            rows = x.fetchall()
-            return rows
-        return f
-
-
-    def translate_insert(self, operation):
-        def f(x):
-            sqls = ['INSERT INTO %s' % (operation.table,)]
-            args = []
-            if operation.columns:
-                names = []
-                values = []
-                for k,v in operation.columns:
-                    names.append(k)
-                    values.append('?')
-                    args.append(v)
-                sqls.append('(%s) values (%s)' % (
-                    ','.join(names),
-                    ','.join(values),
-                ))
-            else:
-                sqls.append('DEFAULT VALUES')
-            sql = ' '.join(sqls)
-            x.execute(sql, tuple(args))
-            return x.lastrowid
-        return f
-
-
-
-class SyncRunner(object):
-    """
-    I run synchronous database operations.
-    """
-
-    implements(IRunner)
-
-
-    def __init__(self, conn):
-        self.conn = conn
-
-
-    def run(self, func):
-        cursor = self.conn.cursor()
-        result = func(cursor)
-        return result
