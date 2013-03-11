@@ -1,0 +1,1 @@
+[![Build Status](https://secure.travis-ci.org/iffy/norm.png)](http://travis-ci.org/iffy/norm)
