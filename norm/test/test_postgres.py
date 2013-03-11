@@ -86,7 +86,17 @@ class PostgresAdbapiTest(TranslateRunnerTestMixin, TestCase):
                 id integer primary key,
                 name text
             )''')
-        return cpool.runInteraction(setup).addCallback(lambda _:runner)
+        def addClean(_):
+            self.addCleanup(self.cleanup, cpool)
+        d = cpool.runInteraction(setup)
+        d.addCallback(addClean)
+        return d.addCallback(lambda _:runner)
+
+
+    def cleanup(self, pool):
+        def drop(x):
+            x.execute('drop table foo')
+        return pool.runInteraction(drop)
 
 
     def getTranslator(self):
