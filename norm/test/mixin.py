@@ -128,5 +128,6 @@ class TranslateRunnerTestMixin(object):
         e = yield self.getExecutor()
 
         yield e.run(SQL('create table a (id integer)'))
+        self.addCleanup(e.run, SQL('drop table a'))
 
 

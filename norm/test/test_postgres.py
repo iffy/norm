@@ -83,7 +83,7 @@ class PostgresAdbapiTest(TranslateRunnerTestMixin, TestCase):
         runner = AdbapiRunner(cpool)
         def setup(x):
             x.execute('''create table foo (
-                id integer primary key,
+                id serial primary key,
                 name text
             )''')
         def addClean(_):
