@@ -1,6 +1,23 @@
 from zope.interface import implements
+from twisted.internet import defer
 
 from norm.interface import ITranslator, IRunner
+
+
+
+class Executor(object):
+
+
+    def __init__(self, translator, runner):
+        self.translator = translator
+        self.runner = runner
+
+
+    @defer.inlineCallbacks
+    def run(self, op):
+        translated = self.translator.translate(op)
+        result = yield self.runner.run(translated)
+        defer.returnValue(result)
 
 
 

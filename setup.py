@@ -6,7 +6,7 @@ setup(
     author='Matt Haggard',
     author_email='haggardii@gmail.com',
     name='norm',
-    version='0.1',
+    version='0.2',
     packages=[
         'norm', 'norm.test',
     ],
