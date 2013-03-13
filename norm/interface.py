@@ -16,9 +16,18 @@ class ITranslator(Interface):
     I translate operations into functions to be run by an L{IRunner}.
     """
 
-    def translate(operation):
+
+    def syncFunction(operation):
         """
-        Given an operation, return something that an L{IRunner} can run.
+        Return a function that can be called with a DB-API2 cursor object to
+        perform C{operation}.
+        """
+
+
+    def asyncFunction(operation):
+        """
+        Return a function that can be called with an L{IAsyncCursor} object to
+        perform C{operation}.
         """
 
 
@@ -30,12 +39,37 @@ class ITranslator(Interface):
 
 
 
+class IAsyncCursor(Interface):
+
+
+    def execute(query, params=None):
+        """
+        Execute the given sql and params.
+
+        Return a C{Deferred} which will fire with the DB-API results.
+        """
+
+
+    def close():
+        """
+        Close the connection.
+        """
+
+
 class IRunner(Interface):
     """
-    I run translated operations.
+    I translate and run operations.
     """
+
 
     def run(operation):
         """
         Translate and run an operation within a transaction.
+        """
+
+
+    def runInteraction(function, *args, **kwargs):
+        """
+        Run a function within a database transaction.  The function will be
+        passed an L{IRunner} and should call L{run}.
         """

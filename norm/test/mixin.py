@@ -59,13 +59,6 @@ class TranslateRunnerTestMixin(object):
 
 
     @defer.inlineCallbacks
-    def r(self, runner, translator, op):
-        translated = translator.translate(op)
-        value = yield runner.run(translated)
-        defer.returnValue(value)
-
-
-    @defer.inlineCallbacks
     def test_Insert(self):
         """
         You can Insert a record and get the last insert row id out.
@@ -129,5 +122,35 @@ class TranslateRunnerTestMixin(object):
 
         yield e.run(SQL('create table a (id integer)'))
         self.addCleanup(e.run, SQL('drop table a'))
+
+
+    @defer.inlineCallbacks
+    def test_runInteraction(self):
+        """
+        You can run an asynchronous function within the context of a
+        transaction.
+        """
+        e = yield self.getExecutor()
+
+        def interaction(runner, arg, kwarg=None):
+            i1 = runner.run(Insert('foo', [('name', arg)], lastrowid=True))
+            i2 = runner.run(Insert('foo', [('name', kwarg)], lastrowid=True))
+            d = defer.gatherResults([i1, i2])
+            return d.addCallback(getNames, runner)
+
+
+        def getNames(ids, runner):
+            d = runner.run(SQL('select name from foo'))
+            return d.addCallback(gotNames, ids)
+
+
+        def gotNames(names, ids):
+            return [x[0] for x in names], ids
+        
+        result = yield e.runInteraction(interaction, 'name1', kwarg='name2')
+        names, ids = result
+        self.assertEqual(set(names), set(['name1', 'name2']))
+        self.assertEqual(set(ids), set([1,2]))
+
 
 

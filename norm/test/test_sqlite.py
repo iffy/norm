@@ -1,8 +1,7 @@
 from twisted.trial.unittest import TestCase
-from twisted.enterprise import adbapi
 
-from norm.sqlite import SqliteSyncTranslator
-from norm.common import SyncRunner, AdbapiRunner
+from norm.sqlite import SqliteTranslator
+from norm.common import BlockingRunner
 from norm.test.mixin import TranslateRunnerTestMixin
 
 
@@ -20,7 +19,7 @@ except ImportError:
 
 
 
-class SqliteSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
+class SqliteBlockingTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getConnection(self):
@@ -33,36 +32,16 @@ class SqliteSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getRunner(self, translator):
-        return SyncRunner(self.getConnection(), translator)
+        return BlockingRunner(self.getConnection(), translator)
 
 
     def getTranslator(self):
-        return SqliteSyncTranslator()
+        return SqliteTranslator()
 
 
     def test_translateParams(self):
         """
         Should leave ? alone
         """
-        trans = SqliteSyncTranslator()
+        trans = SqliteTranslator()
         self.assertEqual(trans.translateParams('select ?'), 'select ?')
-
-
-
-class SqliteAdbapiTest(TranslateRunnerTestMixin, TestCase):
-
-
-    def getRunner(self, translator):
-        cpool = adbapi.ConnectionPool(sqlite_module, database=':memory:',
-                                      cp_min=1, cp_max=1)
-        runner = AdbapiRunner(cpool, translator)
-        def setup(x):
-            x.execute('''create table foo (
-                id integer primary key,
-                name text
-            )''')
-        return cpool.runInteraction(setup).addCallback(lambda _:runner)
-
-
-    def getTranslator(self):
-        return SqliteSyncTranslator()

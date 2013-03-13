@@ -1,11 +1,10 @@
-from norm.common import SyncTranslator
+from norm.common import Translator
 
 
 
-class PostgresSyncTranslator(SyncTranslator):
+class PostgresTranslator(Translator):
     """
-    I translate SQL database operations into blocking functions for a
-    postgres connection.
+    I translate SQL database operations into functions
     """
 
     paramstyle = '%s'

@@ -1,8 +1,7 @@
 from twisted.trial.unittest import TestCase, SkipTest
-from twisted.enterprise import adbapi
 
-from norm.postgres import PostgresSyncTranslator
-from norm.common import SyncRunner, AdbapiRunner
+from norm.postgres import PostgresTranslator
+from norm.common import BlockingRunner
 from norm.test.mixin import TranslateRunnerTestMixin
 
 from urlparse import urlparse
@@ -33,7 +32,7 @@ def getConnArgs():
     }
 
 
-class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
+class PostgresBlockingTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getConnection(self):
@@ -59,48 +58,18 @@ class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getRunner(self, translator):
-        return SyncRunner(self.getConnection(), translator)
+        return BlockingRunner(self.getConnection(), translator)
 
 
     def getTranslator(self):
-        return PostgresSyncTranslator()
+        return PostgresTranslator()
 
 
     def test_translateParams(self):
         """
         Should make ? into %s
         """
-        trans = PostgresSyncTranslator()
+        trans = PostgresTranslator()
         self.assertEqual(trans.translateParams('select ?'), 'select %s')
-
-
-class PostgresAdbapiTest(TranslateRunnerTestMixin, TestCase):
-
-
-    def getRunner(self, translator):
-        kwargs = getConnArgs()
-        cpool = adbapi.ConnectionPool('psycopg2', **kwargs)
-        runner = AdbapiRunner(cpool, translator)
-        def setup(x):
-            x.execute('''create table foo (
-                id serial primary key,
-                name text
-            )''')
-        def addClean(_):
-            self.addCleanup(self.cleanup, cpool)
-        d = cpool.runInteraction(setup)
-        d.addCallback(addClean)
-        return d.addCallback(lambda _:runner)
-
-
-    def cleanup(self, pool):
-        def drop(x):
-            x.execute('drop table foo')
-        return pool.runInteraction(drop)
-
-
-    def getTranslator(self):
-        return PostgresSyncTranslator()
-
 
 

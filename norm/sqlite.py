@@ -1,11 +1,10 @@
-from norm.common import SyncTranslator
+from norm.common import Translator
 
 
 
-class SqliteSyncTranslator(SyncTranslator):
+class SqliteTranslator(Translator):
     """
-    I translate SQL database operations into blocking functions for an SQLite
-    connection.
+    I translate database operations for SQLite connections
     """
 
     paramstyle = '?'
