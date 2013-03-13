@@ -32,8 +32,8 @@ class SqliteSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
         return db
 
 
-    def getRunner(self):
-        return SyncRunner(self.getConnection())
+    def getRunner(self, translator):
+        return SyncRunner(self.getConnection(), translator)
 
 
     def getTranslator(self):
@@ -52,10 +52,10 @@ class SqliteSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 class SqliteAdbapiTest(TranslateRunnerTestMixin, TestCase):
 
 
-    def getRunner(self):
+    def getRunner(self, translator):
         cpool = adbapi.ConnectionPool(sqlite_module, database=':memory:',
                                       cp_min=1, cp_max=1)
-        runner = AdbapiRunner(cpool)
+        runner = AdbapiRunner(cpool, translator)
         def setup(x):
             x.execute('''create table foo (
                 id integer primary key,

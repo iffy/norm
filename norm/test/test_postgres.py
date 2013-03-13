@@ -58,8 +58,8 @@ class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
         db.close()
 
 
-    def getRunner(self):
-        return SyncRunner(self.getConnection())
+    def getRunner(self, translator):
+        return SyncRunner(self.getConnection(), translator)
 
 
     def getTranslator(self):
@@ -77,10 +77,10 @@ class PostgresSyncTranslatorTest(TranslateRunnerTestMixin, TestCase):
 class PostgresAdbapiTest(TranslateRunnerTestMixin, TestCase):
 
 
-    def getRunner(self):
+    def getRunner(self, translator):
         kwargs = getConnArgs()
         cpool = adbapi.ConnectionPool('psycopg2', **kwargs)
-        runner = AdbapiRunner(cpool)
+        runner = AdbapiRunner(cpool, translator)
         def setup(x):
             x.execute('''create table foo (
                 id serial primary key,

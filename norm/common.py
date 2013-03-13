@@ -5,22 +5,6 @@ from norm.interface import ITranslator, IRunner
 
 
 
-class Executor(object):
-
-
-    def __init__(self, translator, runner):
-        self.translator = translator
-        self.runner = runner
-
-
-    @defer.inlineCallbacks
-    def run(self, op):
-        translated = self.translator.translate(op)
-        result = yield self.runner.run(translated)
-        defer.returnValue(result)
-
-
-
 class SyncTranslator(object):
     """
     I translate SQL database operations into blocking functions
@@ -96,13 +80,15 @@ class SyncRunner(object):
     implements(IRunner)
 
 
-    def __init__(self, conn):
+    def __init__(self, conn, translator):
         self.conn = conn
+        self.translator = translator
 
 
-    def run(self, func):
+    def run(self, op):
+        translated = self.translator.translate(op)
         cursor = self.conn.cursor()
-        result = func(cursor)
+        result = translated(cursor)
         return result
 
 
@@ -116,9 +102,14 @@ class AdbapiRunner(object):
     implements(IRunner)
 
 
-    def __init__(self, pool):
+    def __init__(self, pool, translator):
         self.pool = pool
+        self.translator = translator
 
 
-    def run(self, func):
-        return self.pool.runInteraction(func)
+    def run(self, op):
+        translated = self.translator.translate(op)
+        return self.pool.runInteraction(translated)
+
+
+

@@ -29,7 +29,7 @@ class TranslateRunnerTestMixin(object):
     """
 
 
-    def getRunner(self):
+    def getRunner(self, translator):
         raise NotImplementedError("Provide an IRunner with a connection to a "
                                   "database with the default tables in it")
 
@@ -41,14 +41,14 @@ class TranslateRunnerTestMixin(object):
 
     @defer.inlineCallbacks
     def getExecutor(self):
-        runner = yield self.getRunner()
         translator = yield self.getTranslator()
-        defer.returnValue(AllInOneRunner(translator, runner))
+        runner = yield self.getRunner(translator)
+        defer.returnValue(runner)
 
 
     @defer.inlineCallbacks
     def test_IRunner(self):
-        runner = yield self.getRunner()
+        runner = yield self.getRunner(None)
         verifyObject(IRunner, runner)
 
 

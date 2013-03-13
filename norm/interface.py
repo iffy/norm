@@ -35,7 +35,7 @@ class IRunner(Interface):
     I run translated operations.
     """
 
-    def run(translated_operation):
+    def run(operation):
         """
-        Run the operation.
+        Translate and run an operation within a transaction.
         """
