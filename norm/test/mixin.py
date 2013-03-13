@@ -39,6 +39,14 @@ class TranslateRunnerTestMixin(object):
                                   "IRunner")
 
 
+    def doCommit(self, runner):
+        raise NotImplementedError("Make this perform a commit")
+
+
+    def doRollback(self, runner):
+        raise NotImplementedError("Make this perform a rollback")
+
+
     @defer.inlineCallbacks
     def getExecutor(self):
         translator = yield self.getTranslator()
@@ -125,6 +133,35 @@ class TranslateRunnerTestMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_run_commitOnSuccess(self):
+        """
+        Successful runs should result in commit()
+        """
+        e = yield self.getExecutor()
+
+        yield e.run(Insert('foo', [('name', 'something')]))
+        yield self.doRollback(e)
+        count = yield e.run(SQL('select count(*) from foo'))
+        self.assertEqual(count[0][0], 1, "Should have committed")
+
+
+    @defer.inlineCallbacks
+    def test_run_rollbackOnFailure(self):
+        """
+        Unsuccessful runs should result in rollback()
+        """
+        e = yield self.getExecutor()
+
+        try:
+            yield e.run(Insert('foo', [('nonexistantcolumn', 'something')]))
+        except:
+            pass
+
+        count = yield e.run(SQL('select count(*) from foo'))
+        # by getting here and not failing, the assertion is complete.
+
+
+    @defer.inlineCallbacks
     def test_runInteraction(self):
         """
         You can run an asynchronous function within the context of a
@@ -151,6 +188,48 @@ class TranslateRunnerTestMixin(object):
         names, ids = result
         self.assertEqual(set(names), set(['name1', 'name2']))
         self.assertEqual(set(ids), set([1,2]))
+
+
+    @defer.inlineCallbacks
+    def test_runInteraction_commitOnSuccess(self):
+        """
+        runInteraction should commit on success
+        """
+        e = yield self.getExecutor()
+
+        def interaction(runner):
+            return runner.run(Insert('foo'))
+
+        result = yield e.runInteraction(interaction)
+        yield self.doRollback(e)
+        count = yield e.run(SQL('select count(*) from foo'))
+        self.assertEqual(count[0][0], 1, "Should have committed")
+
+
+    @defer.inlineCallbacks
+    def test_runInteraction_rollbackOnFailure(self):
+        """
+        runInteraction should rollback on failure
+        """
+        e = yield self.getExecutor()
+
+        def interaction(runner):
+            return runner.run(Insert('foo')).addCallback(badnews)
+
+        def badnews(x):
+            raise Exception('foo')
+
+        try:
+            result = yield e.runInteraction(interaction)
+        except:
+            pass
+        else:
+            self.fail("Should have raised an exception")
+
+        yield self.doCommit(e)
+        count = yield e.run(SQL('select count(*) from foo'))
+        self.assertEqual(count[0][0], 0, "Should have rolled back")
+
 
 
 

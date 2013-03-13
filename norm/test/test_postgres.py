@@ -65,6 +65,14 @@ class PostgresBlockingTest(TranslateRunnerTestMixin, TestCase):
         return PostgresTranslator()
 
 
+    def doRollback(self, runner):
+        runner.conn.rollback()
+
+
+    def doCommit(self, runner):
+        runner.conn.commit()
+
+
     def test_translateParams(self):
         """
         Should make ? into %s

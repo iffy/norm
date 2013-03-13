@@ -39,6 +39,14 @@ class SqliteBlockingTest(TranslateRunnerTestMixin, TestCase):
         return SqliteTranslator()
 
 
+    def doRollback(self, runner):
+        runner.conn.rollback()
+
+
+    def doCommit(self, runner):
+        runner.conn.commit()
+
+
     def test_translateParams(self):
         """
         Should leave ? alone

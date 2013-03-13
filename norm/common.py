@@ -103,7 +103,18 @@ class BlockingRunner(object):
         """
         func = self.translator.syncFunction(op)
         cursor = self.conn.cursor()
-        return defer.maybeDeferred(func, cursor)
+        d = defer.maybeDeferred(func, cursor)
+        return d.addCallback(self._commit).addErrback(self._rollback)
+
+
+    def _commit(self, result):
+        self.conn.commit()
+        return result
+
+
+    def _rollback(self, err):
+        self.conn.rollback()
+        return err
 
 
     def runInteraction(self, func, *args, **kwargs):
@@ -116,7 +127,8 @@ class BlockingRunner(object):
         """
         runner = BlockingSingleTransactionRunner(self.conn.cursor(),
                                                  self.translator)
-        return func(runner, *args, **kwargs)
+        d = func(runner, *args, **kwargs)
+        return d.addCallback(self._commit).addErrback(self._rollback)
 
 
 
