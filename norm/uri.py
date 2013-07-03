@@ -31,7 +31,6 @@ def parseURI(uri):
             ret['password'] = r.password
         if len(parts) == 2:
             query = parts[1]
-            pq = parse_qs(query)
             for k,v in parse_qs(query).items():
                 ret[k] = v[-1]
     return ret

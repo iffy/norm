@@ -4,7 +4,7 @@ from norm.postgres import PostgresTranslator
 from norm.common import BlockingRunner
 from norm.test.mixin import TranslateRunnerTestMixin
 
-from urlparse import urlparse
+from norm.uri import parseURI, mkConnStr
 
 import os
 psycopg2 = None
@@ -16,28 +16,21 @@ except ImportError:
     pass
 
 
-def getConnArgs():
+def getConnStr():
     url = os.environ.get('NORM_POSTGRESQL_URL', None)
     if not url:
         raise SkipTest('You must define NORM_POSTGRESQL_URL in order to do '
                        'testing against a postgres database.  It should be '
                        'in the format user:password@host:port/database')
-    parsed = urlparse(url)
-    return {
-        'user': parsed.username,
-        'password': parsed.password,
-        'port': parsed.port,
-        'host': parsed.hostname,
-        'database': parsed.path.lstrip('/')
-    }
+    return mkConnStr(parseURI(url))
 
 
 class PostgresBlockingTest(TranslateRunnerTestMixin, TestCase):
 
 
     def getConnection(self):
-        kwargs = getConnArgs()
-        db = psycopg2.connect(**kwargs)
+        connstr = getConnStr()
+        db = psycopg2.connect(connstr)
         c = db.cursor()
         c.execute('''create table foo (
             id serial primary key,
