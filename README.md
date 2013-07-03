@@ -12,7 +12,7 @@ print out all the rows in the table:
 
     from twisted.internet.task import react
     from norm.common import BlockingRunner
-    import sqlite3
+    from norm import makePool
 
 
     def insertFoo(cursor, name):
@@ -27,17 +27,16 @@ print out all the rows in the table:
 
 
     def main(reactor):
-        db = sqlite3.connect(':memory:')
-        runner = BlockingRunner(db)
+        pool = makePool('sqlite:')
         
-        d = runner.runOperation('''CREATE TABLE foo (
+        d = pool.runOperation('''CREATE TABLE foo (
             id integer primary key,
             created timestamp default current_timestamp,
             name text
         )''')
         
-        d.addCallback(lambda _: runner.runInteraction(insertFoo, 'something'))
-        d.addCallback(lambda rowid: runner.runQuery('select * from foo where id = ?', (rowid,)))
+        d.addCallback(lambda _: pool.runInteraction(insertFoo, 'something'))
+        d.addCallback(lambda rowid: pool.runQuery('select * from foo where id = ?', (rowid,)))
         d.addCallback(display)
         return d
 
