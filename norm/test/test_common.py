@@ -263,7 +263,7 @@ class NextAvailablePoolTest(TestCase):
         pool.add('bar')
 
         a = yield pool.get()
-        b = yield pool.get()
+        yield pool.get()
         c = pool.get()
         self.assertFalse(c.called, "Shouldn't have any available")
 

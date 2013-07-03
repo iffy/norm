@@ -1,6 +1,5 @@
 from twisted.internet import defer
-from twisted.python import reflect
-from norm.common import BlockingRunner
+from norm.common import BlockingRunner, BlockingCursor, ConnectionPool
 from norm.uri import parseURI, mkConnStr
 
 
@@ -17,20 +16,31 @@ def _makeSqlite(parsed):
 
 
 
-def _makePostgres(parsed):
+class PostgresRunner(BlockingRunner):
+
+    def cursorFactory(self, cursor):
+        from norm.postgres import PostgresCursorWrapper
+        return PostgresCursorWrapper(BlockingCursor(cursor))
+
+
+
+def _makePostgres(parsed, connections=1):
     import psycopg2
     connstr = mkConnStr(parsed)
-    db = psycopg2.connect(connstr)
-    runner = BlockingRunner(db)
-    return defer.succeed(runner)
+    pool = ConnectionPool()
+    for i in xrange(connections):
+        db = psycopg2.connect(connstr)
+        runner = PostgresRunner(db)
+        pool.add(runner)    
+    return defer.succeed(pool)
 
 
 
-def makePool(uri):
+def makePool(uri, connections=1):
     parsed = parseURI(uri)
     if parsed['scheme'] == 'sqlite':
         return _makeSqlite(parsed)
     elif parsed['scheme'] == 'postgres':
-        return _makePostgres(parsed)
+        return _makePostgres(parsed, connections)
     else:
         raise Exception('%s is not supported' % (parsed['scheme'],))
