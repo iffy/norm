@@ -50,3 +50,31 @@ class IRunner(Interface):
         Run a function within a database transaction.  The function will be
         passed an L{IAsyncCursor} as the first arg.
         """
+
+
+class IPool(Interface):
+
+
+    def add(option):
+        """
+        Add a ready option to the pool
+        """
+
+
+    def remove(option):
+        """
+        Remove an option from the pool
+        """
+
+
+    def get():
+        """
+        Choose the next option; this will fire with a Deferred when the next
+        thing is ready for use.
+        """
+
+
+    def done(option):
+        """
+        Accept an option as ready
+        """

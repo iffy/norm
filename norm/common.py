@@ -1,7 +1,9 @@
 from zope.interface import implements
 from twisted.internet import defer
 
-from norm.interface import IAsyncCursor, IRunner
+from collections import deque, defaultdict
+
+from norm.interface import IAsyncCursor, IRunner, IPool
 
 
 
@@ -82,5 +84,79 @@ class BlockingRunner(object):
     def _rollback(self, result):
         self.conn.rollback()
         return result
+
+
+
+class ConnectionPool(object):
+
+
+    implements(IRunner)
+
+    def __init__(self):
+        self._conns = set()
+
+
+    def add(self, conn):
+        self._conns.add(conn)
+
+
+    def runInteraction(self, function, *args, **kwargs):
+        return list(self._conns)[0].runInteraction(function, *args, **kwargs)
+
+
+
+
+class NextAvailablePool(object):
+    """
+    I give you the next available object in the pool.
+    """
+
+
+    implements(IPool)
+
+
+    def __init__(self):
+        self._options = deque()
+        self._pending = deque()
+        self._pending_removal = defaultdict(lambda:[])
+
+
+    def add(self, option):
+        self._options.append(option)
+        self._fulfillNextPending()
+
+
+    def remove(self, option):
+        try:
+            self._options.remove(option)
+            return defer.succeed(option)
+        except ValueError:
+            d = defer.Deferred()
+            self._pending_removal[option].append(d)
+            return d
+
+
+    def get(self):
+        d = defer.Deferred()
+        self._pending.append(d)
+        self._fulfillNextPending()
+        return d
+
+
+    def _fulfillNextPending(self):
+        if self._pending and self._options:
+            self._pending.popleft().callback(self._options.popleft())
+
+
+    def done(self, option):
+        if option in self._pending_removal:
+            dlist = self._pending_removal.pop(option)
+            map(lambda d: d.callback(option), dlist)
+            return
+        self._options.append(option)
+        self._fulfillNextPending()
+
+
+
 
 

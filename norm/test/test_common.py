@@ -1,11 +1,13 @@
 from twisted.trial.unittest import TestCase
+from twisted.internet import defer
 from zope.interface.verify import verifyObject
 
 from mock import MagicMock, create_autospec
 import sqlite3
 
-from norm.interface import IAsyncCursor, IRunner
-from norm.common import BlockingCursor, BlockingRunner
+from norm.interface import IAsyncCursor, IRunner, IPool
+from norm.common import (BlockingCursor, BlockingRunner, ConnectionPool,
+                         NextAvailablePool)
 
 
 
@@ -153,6 +155,143 @@ class BlockingRunnerTest(TestCase):
         def done(_):
             db.execute('insert into foo (name) values (?)', ('name1',))
         return d.addCallback(done)
+
+
+
+class ConnectionPoolTest(TestCase):
+
+
+    def test_IRunner(self):
+        verifyObject(IRunner, ConnectionPool())
+
+
+    def test_add(self):
+        """
+        You can add connections to a pool
+        """
+        mock = MagicMock()
+
+        dummy_balancer = MagicMock()
+
+        pool = ConnectionPool(pool=dummy_balancer)
+        pool.add(mock)
+
+
+    def test_runInteraction(self):
+        """
+        You can run an interaction
+        """
+        mock = MagicMock()
+        mock.runInteraction = MagicMock(return_value=defer.succeed('success'))
+
+        pool = ConnectionPool()
+        pool.add(mock)
+
+        d = pool.runInteraction('my interaction')
+        self.assertEqual(self.successResultOf(d), 'success')
+        mock.runInteraction.assert_called_once_with('my interaction')
+
+
+
+
+
+class NextAvailablePoolTest(TestCase):
+
+
+    timeout = 2
+
+
+    def test_IPool(self):
+        verifyObject(IPool, NextAvailablePool())
+
+
+    @defer.inlineCallbacks
+    def test_common(self):
+        pool = NextAvailablePool()
+
+        pool.add('foo')
+        pool.add('bar')
+
+        a = yield pool.get()
+        b = yield pool.get()
+        c = pool.get()
+        self.assertFalse(c.called, "Shouldn't have any available")
+
+        yield pool.done(a)
+        self.assertTrue(c.called, "The pending request should get the "
+                        "newly available thing")
+
+
+    def test_add_pending(self):
+        """
+        If a new option is added, it should fulfill pending requests
+        """
+        pool = NextAvailablePool()
+
+        d = pool.get()
+        self.assertFalse(d.called)
+
+        pool.add('foo')
+        self.assertTrue(d.called, "Should fulfill pending request")
+
+
+    @defer.inlineCallbacks
+    def test_remove(self):
+        """
+        If the option isn't being used, removal should happen immediately
+        """
+        pool = NextAvailablePool()
+
+        pool.add('foo')
+        pool.add('bar')
+        r = yield pool.remove('foo')
+        self.assertEqual(r, 'foo')
+
+        a = yield pool.get()
+        self.assertEqual(a, 'bar')
+        b = pool.get()
+        self.assertEqual(b.called, False)
+        pool.done(a)
+        self.assertEqual(b.called, True)
+
+
+    @defer.inlineCallbacks
+    def test_remove_pending(self):
+        """
+        If the option is in use, don't remove it until its done being used.
+        """
+        pool = NextAvailablePool()
+        pool.add('foo')
+        a = yield pool.get()
+
+        b = pool.remove('foo')
+        self.assertFalse(b.called, "Don't remove it yet because it's being used")
+        pool.done(a)
+        self.assertEqual(self.successResultOf(b), 'foo')
+
+
+    @defer.inlineCallbacks
+    def test_remove_twice(self):
+        """
+        If you request removal twice, both removals will be fulfilled
+        """
+        pool = NextAvailablePool()
+        pool.add('foo')
+        a = yield pool.get()
+
+        b = pool.remove('foo')
+        c = pool.remove('foo')
+        pool.done(a)
+        self.assertEqual(self.successResultOf(b), 'foo')
+        self.assertEqual(self.successResultOf(c), 'foo')
+
+
+
+
+
+
+
+
 
 
 
