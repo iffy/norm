@@ -1,3 +1,6 @@
+# Copyright (c) Matt Haggard.
+# See LICENSE for details.
+
 from twisted.internet import defer
 from norm.common import BlockingRunner, BlockingCursor, ConnectionPool
 from norm.uri import parseURI, mkConnStr

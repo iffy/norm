@@ -1,3 +1,6 @@
+# Copyright (c) Matt Haggard.
+# See LICENSE for details.
+
 from distutils.core import setup
 
 
@@ -6,8 +9,12 @@ setup(
     author='Matt Haggard',
     author_email='haggardii@gmail.com',
     name='norm',
-    version='0.3',
+    version='1.0',
     packages=[
         'norm', 'norm.test',
     ],
+    requires = [
+        'Twisted',
+        'mock',
+    ]
 )

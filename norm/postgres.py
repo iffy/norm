@@ -1,3 +1,5 @@
+# Copyright (c) Matt Haggard.
+# See LICENSE for details.
 
 from zope.interface import implements
 
