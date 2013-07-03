@@ -92,16 +92,43 @@ class ConnectionPool(object):
 
     implements(IRunner)
 
-    def __init__(self):
-        self._conns = set()
+
+    def __init__(self, pool=None):
+        self.pool = pool or NextAvailablePool()
 
 
     def add(self, conn):
-        self._conns.add(conn)
+        self.pool.add(conn)
 
 
     def runInteraction(self, function, *args, **kwargs):
-        return list(self._conns)[0].runInteraction(function, *args, **kwargs)
+        return self._runWithConn('runInteraction', function, *args, **kwargs)
+
+
+    def runQuery(self, *args, **kwargs):
+        return self._runWithConn('runQuery', *args, **kwargs)
+
+
+    def runOperation(self, *args, **kwargs):
+        return self._runWithConn('runOperation', *args, **kwargs)
+
+
+    def _finish(self, result, conn):
+        self.pool.done(conn)
+        return result
+
+
+    def _runWithConn(self, name, *args, **kwargs):
+        d = self.pool.get()
+        d.addCallback(self._startRunWithConn, name, *args, **kwargs)
+        return d
+
+
+    def _startRunWithConn(self, conn, name, *args, **kwargs):
+        m = getattr(conn, name)
+        d = m(*args, **kwargs)
+        return d.addBoth(self._finish, conn)
+        
 
 
 

@@ -171,10 +171,11 @@ class ConnectionPoolTest(TestCase):
         """
         mock = MagicMock()
 
-        dummy_balancer = MagicMock()
+        balancer = MagicMock()
 
-        pool = ConnectionPool(pool=dummy_balancer)
+        pool = ConnectionPool(pool=balancer)
         pool.add(mock)
+        balancer.add.assert_called_once_with(mock)
 
 
     def test_runInteraction(self):
@@ -192,6 +193,55 @@ class ConnectionPoolTest(TestCase):
         mock.runInteraction.assert_called_once_with('my interaction')
 
 
+    def test_runQuery(self):
+        """
+        You can run a query
+        """
+        mock = MagicMock()
+        mock.runQuery = MagicMock(return_value=defer.succeed('success'))
+
+        pool = ConnectionPool()
+        pool.add(mock)
+
+        d = pool.runQuery('my query')
+        self.assertEqual(self.successResultOf(d), 'success')
+        mock.runQuery.assert_called_once_with('my query')
+
+
+    def test_runOperation(self):
+        """
+        You can run a query
+        """
+        mock = MagicMock()
+        mock.runOperation = MagicMock(return_value=defer.succeed('success'))
+
+        pool = ConnectionPool()
+        pool.add(mock)
+
+        d = pool.runOperation('my query')
+        self.assertEqual(self.successResultOf(d), 'success')
+        mock.runOperation.assert_called_once_with('my query')
+
+
+    def test_returnToPool(self):
+        """
+        After a successful query, interaction or operation, the connection
+        should be returned to the pool
+        """
+        mock = MagicMock()
+        mock.runInteraction = MagicMock(return_value=defer.fail(Exception('foo')))
+        mock.runQuery = MagicMock(return_value=defer.succeed('something'))
+        mock.runOperation = MagicMock(return_value=defer.succeed('success'))
+
+        pool = ConnectionPool()
+        pool.add(mock)
+
+        d = pool.runQuery('query')
+        self.assertEqual(self.successResultOf(d), 'something')
+        d = pool.runOperation('operation')
+        self.assertEqual(self.successResultOf(d), 'success')
+        d = pool.runInteraction('interaction')
+        self.assertIsInstance(self.failureResultOf(d).value, Exception)
 
 
 
