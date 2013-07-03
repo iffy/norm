@@ -16,7 +16,7 @@ def parseURI(uri):
     ret['scheme'] = r.scheme
     if r.scheme == 'sqlite':
         # sqlite
-        ret['file'] = uri.split('//')[1]
+        ret['file'] = uri.split(':')[1]
     else:
         # postgres
         parts = r.path.lstrip('/').split('?')
@@ -35,3 +35,19 @@ def parseURI(uri):
             for k,v in parse_qs(query).items():
                 ret[k] = v[-1]
     return ret
+
+
+
+def mkConnStr(parsed_uri):
+    """
+    Turn a parsed uri into a connection string suitable for the db module
+    """
+    if parsed_uri['scheme'] == 'sqlite':
+        return parsed_uri['file'] or ':memory:'
+
+    # postgres
+    parts = ['dbname=%s' % parsed_uri['db']]
+    for attr in ['host', 'port', 'user', 'password', 'sslmode']:
+        if attr in parsed_uri:
+            parts.append('%s=%s' % (attr, parsed_uri[attr]))
+    return ' '.join(parts)
