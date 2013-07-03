@@ -3,7 +3,7 @@ from zope.interface.verify import verifyObject
 
 
 from norm.interface import ITranslator, IRunner
-from norm.operation import Insert, SQL
+#from norm.operation import Insert, SQL
 
 
 

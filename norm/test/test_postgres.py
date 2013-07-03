@@ -1,8 +1,5 @@
 from twisted.trial.unittest import TestCase, SkipTest
 
-from norm.postgres import PostgresTranslator
-from norm.common import BlockingRunner
-from norm.test.mixin import TranslateRunnerTestMixin
 
 from norm.uri import parseURI, mkConnStr
 
@@ -23,54 +20,5 @@ def getConnStr():
                        'testing against a postgres database.  It should be '
                        'in the format user:password@host:port/database')
     return mkConnStr(parseURI(url))
-
-
-class PostgresBlockingTest(TranslateRunnerTestMixin, TestCase):
-
-
-    def getConnection(self):
-        connstr = getConnStr()
-        db = psycopg2.connect(connstr)
-        c = db.cursor()
-        c.execute('''create table foo (
-            id serial primary key,
-            name text
-        )''')
-        self.addCleanup(self.cleanup, db)
-        c.close()
-        db.commit()
-        return db
-
-
-    def cleanup(self, db):
-        db.rollback()
-        c = db.cursor()
-        c.execute('drop table foo')
-        db.commit()
-        db.close()
-
-
-    def getRunner(self, translator):
-        return BlockingRunner(self.getConnection(), translator)
-
-
-    def getTranslator(self):
-        return PostgresTranslator()
-
-
-    def doRollback(self, runner):
-        runner.conn.rollback()
-
-
-    def doCommit(self, runner):
-        runner.conn.commit()
-
-
-    def test_translateParams(self):
-        """
-        Should make ? into %s
-        """
-        trans = PostgresTranslator()
-        self.assertEqual(trans.translateParams('select ?'), 'select %s')
 
 

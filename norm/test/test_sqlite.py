@@ -1,55 +1,45 @@
 from twisted.trial.unittest import TestCase
+from twisted.internet import defer
+from zope.interface.verify import verifyObject
 
-from norm.sqlite import SqliteTranslator
-from norm.common import BlockingRunner
-from norm.test.mixin import TranslateRunnerTestMixin
-
-
-sqlite = None
-sqlite_module = None
-
-try:
-    from pysqlite2 import dbapi2
-    sqlite = dbapi2
-    sqlite_module = 'pysqlite2.dbapi2'
-except ImportError:
-    import sqlite3
-    sqlite = sqlite3
-    sqlite_module = 'sqlite3'
+from mock import MagicMock
+from norm.sqlite import SqliteCursorWrapper
+from norm.interface import IAsyncCursor
 
 
 
-class SqliteBlockingTest(TranslateRunnerTestMixin, TestCase):
+class SqliteCursorWrapperTest(TestCase):
 
 
-    def getConnection(self):
-        db = sqlite.connect(':memory:')
-        db.execute('''create table foo (
-            id integer primary key,
-            name text
-        )''')
-        return db
+    def test_IAsyncCursor(self):
+        verifyObject(IAsyncCursor, SqliteCursorWrapper(None))
 
 
-    def getRunner(self, translator):
-        return BlockingRunner(self.getConnection(), translator)
+    def assertCallThrough(self, name, *args, **kwargs):
+        mock = MagicMock()
+        setattr(mock, name, MagicMock(return_value=defer.succeed('foo')))
+
+        cursor = SqliteCursorWrapper(mock)
+        result = getattr(cursor, name)(*args, **kwargs)
+        getattr(mock, name).assert_called_once_with(*args, **kwargs)
+        self.assertEqual(self.successResultOf(result), 'foo')
 
 
-    def getTranslator(self):
-        return SqliteTranslator()
+    def test_execute(self):
+        self.assertCallThrough('execute', 'foo', 'bar')
+        self.assertCallThrough('execute', 'foo')
 
 
-    def doRollback(self, runner):
-        runner.conn.rollback()
+    def test_fetchone(self):
+        self.assertCallThrough('fetchone')
 
 
-    def doCommit(self, runner):
-        runner.conn.commit()
+    def test_fetchall(self):
+        self.assertCallThrough('fetchall')
 
 
-    def test_translateParams(self):
-        """
-        Should leave ? alone
-        """
-        trans = SqliteTranslator()
-        self.assertEqual(trans.translateParams('select ?'), 'select ?')
+    def test_lastRowId(self):
+        self.assertCallThrough('lastRowId')
+
+
+
