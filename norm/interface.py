@@ -50,6 +50,12 @@ class IAsyncCursor(Interface):
         """
 
 
+    def lastRowId():
+        """
+        Return a C{Deferred} id of the most recently inserted row.
+        """
+
+
     def close():
         """
         Close the connection.
@@ -68,8 +74,14 @@ class IRunner(Interface):
         """
 
 
+    def runQuery(sql, params=None):
+        """
+        Run a query in a one-off transaction, returning the deferred result.
+        """
+
+
     def runInteraction(function, *args, **kwargs):
         """
         Run a function within a database transaction.  The function will be
-        passed an L{IRunner} and should call L{run}.
+        passed an L{IAsyncCursor}.
         """
