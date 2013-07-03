@@ -11,7 +11,6 @@ Create a database, add a record (and get the newly created primary key) then
 print out all the rows in the table:
 
     from twisted.internet.task import react
-    from norm.common import BlockingRunner
     from norm import makePool
 
 
