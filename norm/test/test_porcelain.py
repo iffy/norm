@@ -32,10 +32,34 @@ class PostgresTest(TestCase):
         )''')
 
         def interaction(cursor, name):
-            d = cursor.execute('insert into foo (name) values (?)', (name,))
+            d = cursor.execute('insert into porc1 (name) values (?)', (name,))
             d.addCallback(lambda _: cursor.lastRowId())
             return d
         rowid = yield pool.runInteraction(interaction, 'bob')
-        rows = yield pool.runQuery('select id, name from foo where id = ?', (rowid,))
+        rows = yield pool.runQuery('select id, name from porc1 where id = ?', (rowid,))
         self.assertEqual(rows, [(rowid, 'bob')])
 
+
+
+class SqliteTest(TestCase):
+
+
+    timeout = 2
+
+
+    @defer.inlineCallbacks
+    def test_basic(self):
+        pool = yield makePool('sqlite:')
+        yield pool.runOperation('''CREATE TABLE porc1 (
+            id integer primary key,
+            created timestamp default current_timestamp,
+            name text
+        )''')
+
+        def interaction(cursor, name):
+            d = cursor.execute('insert into porc1 (name) values (?)', (name,))
+            d.addCallback(lambda _: cursor.lastRowId())
+            return d
+        rowid = yield pool.runInteraction(interaction, 'bob')
+        rows = yield pool.runQuery('select id, name from porc1 where id = ?', (rowid,))
+        self.assertEqual(rows, [(rowid, 'bob')])
