@@ -1,9 +1,12 @@
 from twisted.trial.unittest import TestCase, SkipTest
+from twisted.internet import defer
+from zope.interface.verify import verifyObject
 
-from norm.postgres import PostgresTranslator
-from norm.common import BlockingRunner
-from norm.test.mixin import TranslateRunnerTestMixin
+from mock import MagicMock
 
+from norm.interface import IAsyncCursor
+from norm.common import BlockingCursor
+from norm.postgres import PostgresCursorWrapper
 from norm.uri import parseURI, mkConnStr
 
 import os
@@ -17,60 +20,63 @@ except ImportError:
 
 
 def getConnStr():
-    url = os.environ.get('NORM_POSTGRESQL_URL', None)
+    url = os.environ.get('NORM_POSTGRESQL_URI', None)
     if not url:
-        raise SkipTest('You must define NORM_POSTGRESQL_URL in order to do '
+        raise SkipTest('You must define NORM_POSTGRESQL_URI in order to do '
                        'testing against a postgres database.  It should be '
                        'in the format user:password@host:port/database')
     return mkConnStr(parseURI(url))
 
 
-class PostgresBlockingTest(TranslateRunnerTestMixin, TestCase):
+
+class PostgresCursorWrapperTest(TestCase):
 
 
-    def getConnection(self):
+    def test_IAsyncCursor(self):
+        verifyObject(IAsyncCursor, PostgresCursorWrapper(None))
+
+
+    def assertCallThrough(self, name, *args, **kwargs):
+        mock = MagicMock()
+        setattr(mock, name, MagicMock(return_value=defer.succeed('foo')))
+
+        cursor = PostgresCursorWrapper(mock)
+        result = getattr(cursor, name)(*args, **kwargs)
+        getattr(mock, name).assert_called_once_with(*args, **kwargs)
+        self.assertEqual(self.successResultOf(result), 'foo')
+
+
+    def test_fetchone(self):
+        self.assertCallThrough('fetchone')
+
+
+    def test_fetchall(self):
+        self.assertCallThrough('fetchall')
+
+
+
+class PostgresCursorWrapperFunctionalTest(TestCase):
+
+
+    timeout = 2
+
+
+    def test_works(self):
         connstr = getConnStr()
         db = psycopg2.connect(connstr)
         c = db.cursor()
-        c.execute('''create table foo (
-            id serial primary key,
-            name text
-        )''')
-        self.addCleanup(self.cleanup, db)
-        c.close()
-        db.commit()
-        return db
+
+        wrapped = PostgresCursorWrapper(BlockingCursor(c))
+
+        d = wrapped.execute('create temporary table foo (id serial primary key, name text)')
+
+        # test ? -> %s
+        d.addCallback(lambda _: wrapped.execute('insert into foo (name) values (?)', ('foo',)))
 
 
-    def cleanup(self, db):
-        db.rollback()
-        c = db.cursor()
-        c.execute('drop table foo')
-        db.commit()
-        db.close()
+        d.addCallback(lambda _: wrapped.lastRowId())
+        def check(rowid):
+            self.assertEqual(rowid, 1, "Should return last inserted row id")
 
-
-    def getRunner(self, translator):
-        return BlockingRunner(self.getConnection(), translator)
-
-
-    def getTranslator(self):
-        return PostgresTranslator()
-
-
-    def doRollback(self, runner):
-        runner.conn.rollback()
-
-
-    def doCommit(self, runner):
-        runner.conn.commit()
-
-
-    def test_translateParams(self):
-        """
-        Should make ? into %s
-        """
-        trans = PostgresTranslator()
-        self.assertEqual(trans.translateParams('select ?'), 'select %s')
-
+        return d.addCallback(check)
 

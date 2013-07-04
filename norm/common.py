@@ -1,110 +1,79 @@
 from zope.interface import implements
 from twisted.internet import defer
 
-from norm.interface import ITranslator, IRunner
+from collections import deque, defaultdict
+
+from norm.interface import IAsyncCursor, IRunner, IPool
 
 
 
-class Translator(object):
+class BlockingCursor(object):
     """
-    I translate SQL database operations into sql and cursor interactions.
+    I wrap a single DB-API2 db cursor in an asynchronous api.
     """
 
-    implements(ITranslator)
-
-    paramstyle = '?'
+    implements(IAsyncCursor)
 
 
-    # common to async and sync
-
-    def translateParams(self, sql):
-        return sql.replace('?', self.paramstyle)
+    def __init__(self, cursor):
+        self.cursor = cursor
 
 
-    # asynchronous stuff
-
-    def asyncFunction(self, operation):
-        pass
+    def execute(self, sql, params=()):
+        return defer.maybeDeferred(self.cursor.execute, sql, params)
 
 
-    # synchronous stuff
-
-    def syncFunction(self, operation):
-        handler = getattr(self, 'sync_'+operation.op_name, None)
-        return handler(operation)
+    def fetchone(self):
+        return defer.maybeDeferred(self.cursor.fetchone)
 
 
-    def sync_sql(self, operation):
-        def f(x):
-            x.execute(self.translateParams(operation.sql), operation.args)
-            return self.maybeGetResults(x, operation)
-        return f
+    def fetchall(self):
+        return defer.maybeDeferred(self.cursor.fetchall)
 
 
-    def maybeGetResults(self, cursor, operation):
-        return cursor.fetchall()
-
-
-    def constructInsert(self, operation):
-        """
-        Create an insert SQL statement.
-        """
-        sqls = ['INSERT INTO %s' % (operation.table,)]
-        args = []
-        if operation.columns:
-            names = []
-            values = []
-            for k,v in operation.columns:
-                names.append(k)
-                values.append('?')
-                args.append(v)
-            sqls.append('(%s) VALUES (%s)' % (
-                ','.join(names),
-                ','.join(values),
-            ))
-        else:
-            sqls.append('DEFAULT VALUES')
-        sql = ' '.join(sqls)
-        return sql, args
-
-
-    def sync_insert(self, operation):
-        def f(x):
-            sql, args = self.constructInsert(operation)
-            x.execute(self.translateParams(sql), tuple(args))
-            if operation.lastrowid:
-                return self.getLastRowId(x, operation)
-        return f
-
-
-    def getLastRowId(self, cursor, operation):
-        print 'getLastRowId', cursor, operation
-        return cursor.lastrowid
+    def lastRowId(self):
+        return defer.succeed(self.cursor.lastrowid)
 
 
 
 class BlockingRunner(object):
     """
-    I provide an asynchronous interface for running database operations,
-    but I actually block to get the queries done.
+    I wrap a single DB-API2 db connection in an asynchronous api.
     """
 
     implements(IRunner)
 
+    cursorFactory = BlockingCursor
 
-    def __init__(self, conn, translator):
+
+    def __init__(self, conn):
         self.conn = conn
-        self.translator = translator
 
 
-    def run(self, op):
-        """
-        @return: A C{Deferred} which will fire with the result of C{op}.
-        """
-        func = self.translator.syncFunction(op)
-        cursor = self.conn.cursor()
-        d = defer.maybeDeferred(func, cursor)
-        return d.addCallback(self._commit).addErrback(self._rollback)
+    def runQuery(self, qry, params=()):
+        return self.runInteraction(self._runQuery, qry, params)
+    
+
+    def _runQuery(self, cursor, qry, params):
+        d = cursor.execute(qry, params)
+        d.addCallback(lambda _: cursor.fetchall())
+        return d
+
+
+    def runOperation(self, qry, params=()):
+        return self.runInteraction(self._runOperation, qry, params)
+
+
+    def _runOperation(self, cursor, qry, params):
+        return cursor.execute(qry, params)
+
+
+    def runInteraction(self, function, *args, **kwargs):
+        cursor = self.cursorFactory(self.conn.cursor())
+        d = defer.maybeDeferred(function, cursor, *args, **kwargs)
+        d.addCallback(self._commit)
+        d.addErrback(self._rollback)
+        return d
 
 
     def _commit(self, result):
@@ -112,38 +81,107 @@ class BlockingRunner(object):
         return result
 
 
-    def _rollback(self, err):
+    def _rollback(self, result):
         self.conn.rollback()
-        return err
-
-
-    def runInteraction(self, func, *args, **kwargs):
-        """
-        @param func: Will be called with an object that has a L{run} method,
-            and C{args} and C{kwargs}.  It should call run and expect
-            asynchronous results.
-
-        @return: A C{Deferred} which will fire with the result of C{func}.
-        """
-        runner = BlockingSingleTransactionRunner(self.conn.cursor(),
-                                                 self.translator)
-        d = func(runner, *args, **kwargs)
-        return d.addCallback(self._commit).addErrback(self._rollback)
+        return result
 
 
 
-class BlockingSingleTransactionRunner(object):
+class ConnectionPool(object):
+
+
+    implements(IRunner)
+
+
+    def __init__(self, pool=None):
+        self.pool = pool or NextAvailablePool()
+
+
+    def add(self, conn):
+        self.pool.add(conn)
+
+
+    def runInteraction(self, function, *args, **kwargs):
+        return self._runWithConn('runInteraction', function, *args, **kwargs)
+
+
+    def runQuery(self, *args, **kwargs):
+        return self._runWithConn('runQuery', *args, **kwargs)
+
+
+    def runOperation(self, *args, **kwargs):
+        return self._runWithConn('runOperation', *args, **kwargs)
+
+
+    def _finish(self, result, conn):
+        self.pool.done(conn)
+        return result
+
+
+    def _runWithConn(self, name, *args, **kwargs):
+        d = self.pool.get()
+        d.addCallback(self._startRunWithConn, name, *args, **kwargs)
+        return d
+
+
+    def _startRunWithConn(self, conn, name, *args, **kwargs):
+        m = getattr(conn, name)
+        d = m(*args, **kwargs)
+        return d.addBoth(self._finish, conn)
+        
+
+
+
+
+class NextAvailablePool(object):
     """
+    I give you the next available object in the pool.
     """
 
-    def __init__(self, cursor, translator):
-        self.cursor = cursor
-        self.translator = translator
+
+    implements(IPool)
 
 
-    def run(self, op):
-        func = self.translator.syncFunction(op)
-        return defer.maybeDeferred(func, self.cursor)
+    def __init__(self):
+        self._options = deque()
+        self._pending = deque()
+        self._pending_removal = defaultdict(lambda:[])
+
+
+    def add(self, option):
+        self._options.append(option)
+        self._fulfillNextPending()
+
+
+    def remove(self, option):
+        try:
+            self._options.remove(option)
+            return defer.succeed(option)
+        except ValueError:
+            d = defer.Deferred()
+            self._pending_removal[option].append(d)
+            return d
+
+
+    def get(self):
+        d = defer.Deferred()
+        self._pending.append(d)
+        self._fulfillNextPending()
+        return d
+
+
+    def _fulfillNextPending(self):
+        if self._pending and self._options:
+            self._pending.popleft().callback(self._options.popleft())
+
+
+    def done(self, option):
+        if option in self._pending_removal:
+            dlist = self._pending_removal.pop(option)
+            map(lambda d: d.callback(option), dlist)
+            return
+        self._options.append(option)
+        self._fulfillNextPending()
 
 
 
