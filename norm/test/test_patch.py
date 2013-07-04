@@ -1,22 +1,16 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer
 
-from norm.sqlite import SqliteTranslator
-from norm.common import BlockingRunner
+from norm import makePool
 from norm.patch import Patcher, SQLPatch
-from norm.operation import SQL
-import sqlite3
 
 
 
 class PatcherTest(TestCase):
 
 
-    def getRunner(self):
-        db = sqlite3.connect(':memory:')
-        runner = BlockingRunner(db, SqliteTranslator())
-        self.addCleanup(db.close)
-        return runner
+    def getPool(self):
+        return makePool('sqlite:')
 
 
     @defer.inlineCallbacks
@@ -31,19 +25,19 @@ class PatcherTest(TestCase):
         r = patcher.add('something', called.append)
         self.assertEqual(r, 1, "Should be patch number 1")
 
-        runner = self.getRunner()
+        pool = yield self.getPool()
 
-        r = yield patcher.upgrade(runner)
+        r = yield patcher.upgrade(pool)
         self.assertEqual(r, [(1, 'something')])
-        self.assertEqual(called, [runner], "Should have called the patch "
-                         "function with the runner as the only arg")
+        self.assertEqual(len(called), 1,
+                         "Should have called the patch function")
 
         called.pop()
-        r = yield patcher.upgrade(runner)
+        r = yield patcher.upgrade(pool)
         self.assertEqual(r, [], "No new patches should be applied")
         self.assertEqual(called, [], "Should not have applied the patch again")
 
-        rows = yield runner.run(SQL('select number, name from _patch'))
+        rows = yield pool.runQuery('select number, name from _patch')
         self.assertEqual(len(rows), 1, "Only one patch applied")
         self.assertEqual(rows[0], (1, 'something'))
 
@@ -62,10 +56,10 @@ class PatcherTest(TestCase):
             '''insert into foo (name) values ('hey')''',
         ))
 
-        runner = self.getRunner()
-        yield patcher.upgrade(runner)
-        runner.conn.rollback()
-        rows = yield runner.run(SQL('select name from foo'))
+        pool = yield self.getPool()
+        yield patcher.upgrade(pool)
+        pool.conn.rollback()
+        rows = yield pool.runQuery('select name from foo')
         self.assertEqual(len(rows), 1, "Should have committed")
 
 
@@ -81,11 +75,11 @@ class PatcherTest(TestCase):
         patcher.add('foo', lambda x:d)
         patcher.add('bar', called.append)
 
-        runner = self.getRunner()
-        r = patcher.upgrade(runner)
+        pool = yield self.getPool()
+        patcher.upgrade(pool)
         self.assertEqual(called, [], "Should not have "
                          "run the bar patch yet")
         d.callback('done')
-        self.assertEqual(called, [runner])
+        self.assertEqual(called, [pool])
 
 

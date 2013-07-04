@@ -3,7 +3,6 @@ Schema patches/migrations
 """
 
 from twisted.internet import defer
-from norm.operation import SQL, Insert
 
 
 
@@ -22,7 +21,7 @@ class Patcher(object):
         Add a patch function.
 
         @param name: Name describing the patch.
-        @param func: A function to be called with a runner
+        @param func: A function to be called with an asynchronous cursor
             as the only argument.
 
         @rtype: int
@@ -51,31 +50,30 @@ class Patcher(object):
                 continue
             applied.append((i, name))
             # apply the patch
-            sem.run(func, runner)
+            sem.run(runner.runInteraction, func)
             # record the application
-            sem.run(self._recordPatch, runner, i, name)
+            sem.run(runner.runInteraction, self._recordPatch, i, name)
         return applied
 
-    def _recordPatch(self, runner, number, name):
-        return runner.run(Insert(self.patch_table_name, [
-            ('number', number),
-            ('name', name),
-        ]))
+
+    def _recordPatch(self, cursor, number, name):
+        return cursor.execute('insert into %s (number, name) values (?,?)' % (
+                              self.patch_table_name,), (number, name))
 
 
     def _appliedPatches(self, runner):
-        d = runner.run(SQL('select number from ' + self.patch_table_name))
+        d = runner.runQuery('select number from ' + self.patch_table_name)
         d.addErrback(lambda x: self._createPatchTable(runner))
         d.addCallback(lambda x: [x[0] for x in x])
         return d
 
 
     def _createPatchTable(self, runner):
-        d = runner.run(SQL('''create table ''' + self.patch_table_name + '''(
+        d = runner.runOperation('''create table ''' + self.patch_table_name + '''(
                             number integer,
                             name text,
                             created timestamp default current_timestamp
-                            )'''))
+                            )''')
         return d.addCallback(lambda x: [])
 
 
@@ -87,11 +85,11 @@ class SQLPatch(object):
         self.sqls = sqls
 
 
-    def __call__(self, runner):
+    def __call__(self, cursor):
         sem = defer.DeferredSemaphore(1)
         dlist = []
         for sql in self.sqls:
-            d = sem.run(runner.run, SQL(sql))
+            d = sem.run(cursor.execute, sql)
             dlist.append(d)
         return defer.gatherResults(dlist)
 
