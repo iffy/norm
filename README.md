@@ -10,7 +10,8 @@ An asynchronous, cross-database library (for use with Twisted, for instance).
 Create a database, add a record (and get the newly created primary key) then
 print out all the rows in the table:
 
-    <!--- example1 -->
+<!--- example1 -->
+
     from twisted.internet.task import react
     from norm import makePool
     def insertFoo(cursor, name):
@@ -37,7 +38,8 @@ print out all the rows in the table:
         return d
     
     react(main, [])
-    <!--- end -->
+
+<!--- end -->
 
 
 ## Schema migrations / patches ##
@@ -45,7 +47,8 @@ print out all the rows in the table:
 Keep track of schema changes:
 
 
-    <!--- example2 -->
+<!--- example2 -->
+
     from twisted.internet.task import react
     from norm import makePool
     from norm.patch import Patcher
@@ -60,5 +63,5 @@ Keep track of schema changes:
         d = patches.upgrade(pool)
         d.addCallback(lambda _: pool.runOperation('insert into foo (name) values (?)', ('foo',)))
 
-    <!--- end -->
+<!--- end -->
     
