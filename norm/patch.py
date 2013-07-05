@@ -22,11 +22,16 @@ class Patcher(object):
 
         @param name: Name describing the patch.
         @param func: A function to be called with an asynchronous cursor
-            as the only argument.
+            as the only argument.  A string, list or tuple of strings may also
+            be provided, in which case C{func} will be wrapped in L{SQLPatch}.
 
         @rtype: int
         @return: The patch number added, starting at 1.
         """
+        if type(func) in (str, unicode):
+            func = SQLPatch(func)
+        elif type(func) in (tuple, list):
+            func = SQLPatch(*func)
         self.patches.append((name,func))
         return len(self.patches)
 

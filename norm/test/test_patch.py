@@ -43,6 +43,31 @@ class PatcherTest(TestCase):
 
 
     @defer.inlineCallbacks
+    def test_add_SQLPatch_default(self):
+        """
+        You can use a single string or a list/tuple of strings,
+        instead of using SQLPatch directly.
+        """
+        patcher = Patcher('_patch')
+        patcher.add('something', [
+            'create table bar (name text)',
+            'create table bar2 (name text)',
+        ])
+        patcher.add('another',
+            'create table bar3 (name text)')
+
+        pool = yield self.getPool()
+        yield patcher.upgrade(pool)
+
+        yield pool.runOperation('insert into bar (name) values (?)',
+                                ('hey',))
+        yield pool.runOperation('insert into bar2 (name) values (?)',
+                                ('hey',))
+        yield pool.runOperation('insert into bar3 (name) values (?)',
+                                ('hey',))
+
+
+    @defer.inlineCallbacks
     def test_commit(self):
         """
         There should be a commit after applying patches
