@@ -15,6 +15,5 @@ setup(
     ],
     requires = [
         'Twisted',
-        'mock',
     ]
 )
