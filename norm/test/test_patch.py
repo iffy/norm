@@ -88,6 +88,7 @@ class PatcherTest(TestCase):
         self.assertEqual(len(rows), 1, "Should have committed")
 
 
+    @defer.inlineCallbacks
     def test_deferred(self):
         """
         If the patch returns a Deferred, it should hold up
@@ -105,6 +106,10 @@ class PatcherTest(TestCase):
         self.assertEqual(called, [], "Should not have "
                          "run the bar patch yet")
         d.callback('done')
-        self.assertEqual(called, [pool])
+        self.assertEqual(len(called), 1)
+
+
+
+
 
 
