@@ -11,6 +11,6 @@ install: pip install -r requirements.txt
 before_script:
     - psql -c 'create database foo;' -U postgres
 
-env: NORM_POSTGRESQL_URL=postgres://postgres@127.0.0.1:5432/foo
+env: NORM_POSTGRESQL_URI=postgres://postgres@127.0.0.1:5432/foo
 
 script: trial norm
