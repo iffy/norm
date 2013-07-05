@@ -10,22 +10,24 @@ An asynchronous, cross-database library (for use with Twisted, for instance).
 Create a database, add a record (and get the newly created primary key) then
 print out all the rows in the table:
 
-<!--- example1 -->
+<!--- test:example1 -->
 
     from twisted.internet.task import react
     from norm import makePool
+    
+
     def insertFoo(cursor, name):
         d = cursor.execute('insert into foo (name) values (?)', (name,))
         d.addCallback(lambda _: cursor.lastRowId())
         return d
     
+
     def display(results):
         for id, created, name in results:
             print name, created
     
-    def main(reactor):
-        pool = makePool('sqlite:')
-        
+
+    def gotPool(pool):
         d = pool.runOperation('''CREATE TABLE foo (
             id integer primary key,
             created timestamp default current_timestamp,
@@ -36,6 +38,11 @@ print out all the rows in the table:
         d.addCallback(lambda rowid: pool.runQuery('select * from foo where id = ?', (rowid,)))
         d.addCallback(display)
         return d
+
+    def main(reactor):
+        return makePool('sqlite:').addCallback(gotPool)
+        
+        
     
     react(main, [])
 
@@ -47,7 +54,7 @@ print out all the rows in the table:
 Keep track of schema changes:
 
 
-<!--- example2 -->
+<!--- test:example2 -->
 
     from twisted.internet.task import react
     from norm import makePool
