@@ -105,11 +105,43 @@ class PatcherTest(TestCase):
         patcher.add('bar', called.append)
 
         pool = yield self.getPool()
-        patcher.upgrade(pool)
+        yield patcher.upgrade(pool)
         self.assertEqual(called, [], "Should not have "
                          "run the bar patch yet")
         d.callback('done')
         self.assertEqual(len(called), 1)
+
+
+    def test_uniquePatchNames(self):
+        """
+        Patch names must be unique
+        """
+        patcher = Patcher()
+        patcher.add('foo', 'foo')
+        self.assertRaises(Exception, patcher.add, 'foo', 'bar')
+
+
+    @defer.inlineCallbacks
+    def test_partialUpgrade(self):
+        """
+        You can stop at a particular patch.
+        """
+        pool = yield self.getPool()
+
+        patcher = Patcher()
+        patcher.add('foo', 'create table foo (name text)')
+        patcher.add('bar', "insert into foo (name) values ('hey')")
+
+        yield patcher.upgrade(pool, 'foo')
+
+        count = yield pool.runQuery('select count(*) from foo')
+        self.assertEqual(count[0][0], 0, "Should not have run the bar patch")
+
+        yield patcher.upgrade(pool)
+
+        count = yield pool.runQuery('select count(*) from foo')
+        self.assertEqual(count[0][0], 1, "Should have run the bar patch")
+
 
 
 

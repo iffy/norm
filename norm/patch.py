@@ -17,6 +17,7 @@ class Patcher(object):
     def __init__(self, patch_table_name='_patch'):
         self.patch_table_name = patch_table_name
         self.patches = []
+        self._patchnames = set()
 
 
     def add(self, name, func):
@@ -28,31 +29,46 @@ class Patcher(object):
             as the only argument.  A string, list or tuple of strings may also
             be provided, in which case C{func} will be wrapped in L{SQLPatch}.
 
+        @raise ValueError: If a patch name is reused.
+
         @rtype: int
         @return: The patch number added, starting at 1.
         """
+        if name in self._patchnames:
+            raise ValueError('There is already a patch named %r' % (name,))
         if type(func) in (str, unicode):
             func = SQLPatch(func)
         elif type(func) in (tuple, list):
             func = SQLPatch(*func)
         self.patches.append((name,func))
+        self._patchnames.add(name)
         return len(self.patches)
 
 
-    def upgrade(self, runner):
+    def upgrade(self, runner, stop_at_patch=None):
         """
         Upgrade a database through the given runner.
+
+        @param runner: An L{IRunner}.
+        @param stop_at_patch: The name of the patch to stop at.  This will
+            correspond to the name supplied to L{add}.
 
         @return: A list of the patches applied
         """
         already = self._appliedPatches(runner)
-        return already.addCallback(self._applyMissing, runner)
+        return already.addCallback(self._applyMissing, runner, stop_at_patch)
     
 
-    def  _applyMissing(self, already, runner):
+    def  _applyMissing(self, already, runner, stop_at_patch=None):
         applied = []
         sem = defer.DeferredSemaphore(1)
+        stop = False
         for i,(name,func) in enumerate(self.patches, 1):
+            if stop:
+                break
+            if stop_at_patch is not None and stop_at_patch == name:
+                # stopping after this one
+                stop = True
             if i in already:
                 # patch already applied
                 continue
