@@ -9,7 +9,7 @@ setup(
     author='Matt Haggard',
     author_email='haggardii@gmail.com',
     name='norm',
-    version='1.0',
+    version='1.1',
     packages=[
         'norm', 'norm.test',
     ],
