@@ -6,7 +6,6 @@ Schema patches/migrations
 """
 
 from twisted.internet import defer
-from collections import OrderedDict
 
 
 
@@ -17,7 +16,8 @@ class Patcher(object):
 
     def __init__(self, patch_table_name='_patch'):
         self.patch_table_name = patch_table_name
-        self.patches = OrderedDict()
+        self.patches = []
+        self._patchnames = set()
 
 
     def add(self, name, func):
@@ -31,13 +31,14 @@ class Patcher(object):
 
         @raise ValueError: If a patch name is reused.
         """
-        if name in self.patches:
+        if name in self._patchnames:
             raise ValueError('There is already a patch named %r' % (name,))
         if type(func) in (str, unicode):
             func = SQLPatch(func)
         elif type(func) in (tuple, list):
             func = SQLPatch(*func)
-        self.patches[name] = func
+        self.patches.append((name, func))
+        self._patchnames.add(name)
 
 
     def upgrade(self, runner, stop_at_patch=None):
@@ -58,7 +59,7 @@ class Patcher(object):
         applied = []
         sem = defer.DeferredSemaphore(1)
         stop = False
-        for name,func in self.patches.items():
+        for name,func in self.patches:
             if stop:
                 break
             if stop_at_patch is not None and stop_at_patch == name:
