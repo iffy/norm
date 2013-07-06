@@ -6,6 +6,7 @@ Schema patches/migrations
 """
 
 from twisted.internet import defer
+from collections import OrderedDict
 
 
 
@@ -16,8 +17,7 @@ class Patcher(object):
 
     def __init__(self, patch_table_name='_patch'):
         self.patch_table_name = patch_table_name
-        self.patches = []
-        self._patchnames = set()
+        self.patches = OrderedDict()
 
 
     def add(self, name, func):
@@ -30,19 +30,14 @@ class Patcher(object):
             be provided, in which case C{func} will be wrapped in L{SQLPatch}.
 
         @raise ValueError: If a patch name is reused.
-
-        @rtype: int
-        @return: The patch number added, starting at 1.
         """
-        if name in self._patchnames:
+        if name in self.patches:
             raise ValueError('There is already a patch named %r' % (name,))
         if type(func) in (str, unicode):
             func = SQLPatch(func)
         elif type(func) in (tuple, list):
             func = SQLPatch(*func)
-        self.patches.append((name,func))
-        self._patchnames.add(name)
-        return len(self.patches)
+        self.patches[name] = func
 
 
     def upgrade(self, runner, stop_at_patch=None):
@@ -63,41 +58,41 @@ class Patcher(object):
         applied = []
         sem = defer.DeferredSemaphore(1)
         stop = False
-        for i,(name,func) in enumerate(self.patches, 1):
+        for name,func in self.patches.items():
             if stop:
                 break
             if stop_at_patch is not None and stop_at_patch == name:
                 # stopping after this one
                 stop = True
-            if i in already:
+            if name in already:
                 # patch already applied
                 continue
-            applied.append((i, name))
+            applied.append(name)
             # apply the patch
             sem.run(runner.runInteraction, func)
             # record the application
-            sem.run(runner.runInteraction, self._recordPatch, i, name)
+            sem.run(runner.runInteraction, self._recordPatch, name)
         return applied
 
 
-    def _recordPatch(self, cursor, number, name):
-        return cursor.execute('insert into %s (number, name) values (?,?)' % (
-                              self.patch_table_name,), (number, name))
+    def _recordPatch(self, cursor, name):
+        return cursor.execute('insert into %s (name) values (?)' % (
+                              self.patch_table_name,), (name,))
 
 
     def _appliedPatches(self, runner):
-        d = runner.runQuery('select number from ' + self.patch_table_name)
+        d = runner.runQuery('select name from ' + self.patch_table_name)
         d.addErrback(lambda x: self._createPatchTable(runner))
         d.addCallback(lambda x: [x[0] for x in x])
         return d
 
 
     def _createPatchTable(self, runner):
-        d = runner.runOperation('''create table ''' + self.patch_table_name + '''(
-                            number integer,
-                            name text,
-                            created timestamp default current_timestamp
-                            )''')
+        d = runner.runOperation(
+            '''create table ''' + self.patch_table_name + '''(
+                name text,
+                created timestamp default current_timestamp
+            )''')
         return d.addCallback(lambda x: [])
 
 

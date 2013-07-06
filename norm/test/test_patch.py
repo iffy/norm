@@ -25,13 +25,12 @@ class PatcherTest(TestCase):
         called = []
 
         patcher = Patcher('_patch')
-        r = patcher.add('something', called.append)
-        self.assertEqual(r, 1, "Should be patch number 1")
+        patcher.add('something', called.append)
 
         pool = yield self.getPool()
 
         r = yield patcher.upgrade(pool)
-        self.assertEqual(r, [(1, 'something')])
+        self.assertEqual(r, ['something'])
         self.assertEqual(len(called), 1,
                          "Should have called the patch function")
 
@@ -40,9 +39,9 @@ class PatcherTest(TestCase):
         self.assertEqual(r, [], "No new patches should be applied")
         self.assertEqual(called, [], "Should not have applied the patch again")
 
-        rows = yield pool.runQuery('select number, name from _patch')
+        rows = yield pool.runQuery('select name from _patch')
         self.assertEqual(len(rows), 1, "Only one patch applied")
-        self.assertEqual(rows[0], (1, 'something'))
+        self.assertEqual(rows[0], ('something',))
 
 
     @defer.inlineCallbacks
@@ -60,7 +59,9 @@ class PatcherTest(TestCase):
             'create table bar3 (name text)')
 
         pool = yield self.getPool()
-        yield patcher.upgrade(pool)
+        applied = yield patcher.upgrade(pool)
+        self.assertEqual(applied, ['something', 'another'], "Should return the"
+                         " names of the patches applied")
 
         yield pool.runOperation('insert into bar (name) values (?)',
                                 ('hey',))
@@ -132,7 +133,8 @@ class PatcherTest(TestCase):
         patcher.add('foo', 'create table foo (name text)')
         patcher.add('bar', "insert into foo (name) values ('hey')")
 
-        yield patcher.upgrade(pool, 'foo')
+        patches = yield patcher.upgrade(pool, 'foo')
+        self.assertEqual(patches, ['foo'], "Only foo should have been applied")
 
         count = yield pool.runQuery('select count(*) from foo')
         self.assertEqual(count[0][0], 0, "Should not have run the bar patch")
