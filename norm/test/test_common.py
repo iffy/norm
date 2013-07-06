@@ -76,11 +76,34 @@ class BlockingRunnerTest(TestCase):
 
 
     def test_IRunner(self):
-        verifyObject(IRunner, BlockingRunner(None))
+        verifyObject(IRunner, BlockingRunner(sqlite3.connect(':memory:')))
 
 
     def test_cursorFactory(self):
         self.assertEqual(BlockingRunner.cursorFactory, BlockingCursor)
+
+
+    @defer.inlineCallbacks
+    def test_dict(self):
+        """
+        Rows can be accessed like dicts, too.
+        """
+        db = sqlite3.connect(':memory:')
+        runner = BlockingRunner(db)
+
+        yield runner.runOperation('create table foo (name text, size text)')
+        yield runner.runOperation('insert into foo (name, size) values (?,?)',
+                                  ('hey', 'ho'))
+        rows = yield runner.runQuery('select * from foo')
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['name'], 'hey')
+        self.assertEqual(rows[0]['size'], 'ho')
+        self.assertEqual(rows[0][0], 'hey')
+        self.assertEqual(rows[0][1], 'ho')
+        name, size = rows[0]
+        self.assertEqual(name, 'hey')
+        self.assertEqual(size, 'ho')
+        self.assertEqual(rows[0].keys(), ['name', 'size'])
 
 
     def test_runInteraction(self):
@@ -138,7 +161,7 @@ class BlockingRunnerTest(TestCase):
 
         d = runner.runQuery('select name from foo order by name')
         def check(result):
-            self.assertEqual(result, [
+            self.assertEqual(map(tuple,result), [
                 ('name1',),
                 ('name2',),
             ])

@@ -41,7 +41,7 @@ class PatcherTest(TestCase):
 
         rows = yield pool.runQuery('select name from _patch')
         self.assertEqual(len(rows), 1, "Only one patch applied")
-        self.assertEqual(rows[0], ('something',))
+        self.assertEqual(rows[0]['name'], 'something')
 
 
     @defer.inlineCallbacks

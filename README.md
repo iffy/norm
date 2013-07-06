@@ -65,7 +65,7 @@ Keep track of schema changes:
 
 
     def display(rows):
-        assert rows[0] == ('foo', 'hey'), rows[0]
+        assert tuple(rows[0]) == ('foo', 'hey'), rows[0]
         print rows[0]
 
 
