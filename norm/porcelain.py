@@ -8,18 +8,17 @@ from norm.uri import parseURI, mkConnStr
 
 
 def _makeSqlite(parsed):
-    try:
-        from pysqlite2 import dbapi2 as sqlite
-    except ImportError:
-        import sqlite3 as sqlite
+    from norm.sqlite import sqlite
     connstr = mkConnStr(parsed)
     db = sqlite.connect(connstr)
+    db.row_factory = sqlite.Row
     runner = BlockingRunner(db)
     return defer.succeed(runner)
 
 
 
 class PostgresRunner(BlockingRunner):
+
 
     def cursorFactory(self, cursor):
         from norm.postgres import PostgresCursorWrapper
@@ -29,10 +28,11 @@ class PostgresRunner(BlockingRunner):
 
 def _makePostgres(parsed, connections=1):
     import psycopg2
+    from psycopg2.extras import DictCursor
     connstr = mkConnStr(parsed)
     pool = ConnectionPool()
     for i in xrange(connections):
-        db = psycopg2.connect(connstr)
+        db = psycopg2.connect(connstr, cursor_factory=DictCursor)
         runner = PostgresRunner(db)
         pool.add(runner)    
     return defer.succeed(pool)

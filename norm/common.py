@@ -7,13 +7,7 @@ from twisted.internet import defer
 from collections import deque, defaultdict, namedtuple
 
 from norm.interface import IAsyncCursor, IRunner, IPool
-
-
-# XXX stop duplicating this everywhere
-try:
-    from pysqlite2 import dbapi2 as sqlite
-except ImportError:
-    import sqlite3 as sqlite
+from norm.sqlite import sqlite
 
 
 
@@ -61,7 +55,6 @@ class BlockingRunner(object):
         @param conn: A synchronous database connection.
         """
         self.conn = conn
-        self.conn.row_factory = sqlite.Row
 
 
     def runQuery(self, qry, params=()):

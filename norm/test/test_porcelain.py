@@ -41,6 +41,8 @@ class PostgresTest(TestCase):
         rowid = yield pool.runInteraction(interaction, 'bob')
         rows = yield pool.runQuery('select id, name from porc1 where id = ?', (rowid,))
         self.assertEqual(map(tuple,rows), [(rowid, 'bob')])
+        self.assertEqual(rows[0]['id'], rowid)
+        self.assertEqual(rows[0]['name'], 'bob')
 
 
 
@@ -66,3 +68,7 @@ class SqliteTest(TestCase):
         rowid = yield pool.runInteraction(interaction, 'bob')
         rows = yield pool.runQuery('select id, name from porc1 where id = ?', (rowid,))
         self.assertEqual(map(tuple,rows), [(rowid, 'bob')])
+        self.assertEqual(rows[0]['id'], rowid)
+        self.assertEqual(rows[0]['name'], 'bob')
+
+

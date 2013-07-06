@@ -6,6 +6,11 @@ from zope.interface import implements
 from norm.interface import IAsyncCursor
 
 
+try:
+    from pysqlite2 import dbapi2 as sqlite
+except ImportError:
+    import sqlite3 as sqlite
+
 
 
 class SqliteCursorWrapper(object):

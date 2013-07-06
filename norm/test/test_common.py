@@ -83,29 +83,6 @@ class BlockingRunnerTest(TestCase):
         self.assertEqual(BlockingRunner.cursorFactory, BlockingCursor)
 
 
-    @defer.inlineCallbacks
-    def test_dict(self):
-        """
-        Rows can be accessed like dicts, too.
-        """
-        db = sqlite3.connect(':memory:')
-        runner = BlockingRunner(db)
-
-        yield runner.runOperation('create table foo (name text, size text)')
-        yield runner.runOperation('insert into foo (name, size) values (?,?)',
-                                  ('hey', 'ho'))
-        rows = yield runner.runQuery('select * from foo')
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]['name'], 'hey')
-        self.assertEqual(rows[0]['size'], 'ho')
-        self.assertEqual(rows[0][0], 'hey')
-        self.assertEqual(rows[0][1], 'ho')
-        name, size = rows[0]
-        self.assertEqual(name, 'hey')
-        self.assertEqual(size, 'ho')
-        self.assertEqual(rows[0].keys(), ['name', 'size'])
-
-
     def test_runInteraction(self):
         """
         Should call the function with an instance of cursorFactory
