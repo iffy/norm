@@ -6,7 +6,7 @@ from twisted.internet import defer
 
 import os
 
-from norm.porcelain import makePool
+from norm.porcelain import makePool, insert
 
 
 
@@ -45,6 +45,18 @@ class PostgresTest(TestCase):
         self.assertEqual(rows[0]['name'], 'bob')
 
 
+    @defer.inlineCallbacks
+    def test_insert(self):
+        pool = yield makePool(postgres_url)
+        yield pool.runOperation('''CREATE TEMPORARY TABLE porc2 (
+            id serial primary key,
+            name text
+        )''')
+
+        rowid = yield insert(pool, 'insert into porc2 (name) values (?)', ('bob',))
+        self.assertEqual(rowid, 1)
+
+
 
 class SqliteTest(TestCase):
 
@@ -71,4 +83,15 @@ class SqliteTest(TestCase):
         self.assertEqual(rows[0]['id'], rowid)
         self.assertEqual(rows[0]['name'], 'bob')
 
+
+    @defer.inlineCallbacks
+    def test_insert(self):
+        pool = yield makePool('sqlite:')
+        yield pool.runOperation('''CREATE TABLE porc2 (
+            id integer primary key,
+            name text
+        )''')
+
+        rowid = yield insert(pool, 'insert into porc2 (name) values (?)', ('bob',))
+        self.assertEqual(rowid, 1)
 

@@ -1,6 +1,10 @@
 # Copyright (c) Matt Haggard.
 # See LICENSE for details.
 
+__all__ = ['makePool', 'insert']
+
+
+
 from twisted.internet import defer
 from norm.common import BlockingRunner, BlockingCursor, ConnectionPool
 from norm.uri import parseURI, mkConnStr
@@ -47,3 +51,17 @@ def makePool(uri, connections=1):
         return _makePostgres(parsed, connections)
     else:
         raise Exception('%s is not supported' % (parsed['scheme'],))
+
+
+
+def _insert(cursor, qry, params):
+    d = cursor.execute(qry, params)
+    return d.addCallback(lambda _: cursor.lastRowId())
+
+
+def insert(runner, qry, params=()):
+    """
+    Run an INSERT-like query and return the id of the newly created row.
+    """
+    return runner.runInteraction(_insert, qry, params)
+
