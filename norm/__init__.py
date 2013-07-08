@@ -3,5 +3,5 @@
 
 __all__ = ['__version__', 'makePool', 'insert']
 
-__version__ = '1.2.2'
+__version__ = '1.3.0'
 from norm.porcelain import makePool, insert
