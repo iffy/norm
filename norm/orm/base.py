@@ -250,21 +250,31 @@ def objectInfo(obj):
 
 
 
-def reconstitute(cls, data):
+def reconstitute(data):
     """
-    Reconstitute an object using data from a database.  This will not call
-    the C{__init__} method of C{cls}.
+    Reconstitute an object or list of objects using data from a database.
+    This will not call the C{__init__} method of the reconstituted classes.
 
-    @param cls: The class of the object to reconstitute.
     @param data: An iterable of 2-tuples (property, value) to be used to set
-        the values on the returned instance.
+        the values on the returned instance(s).
 
-    @return: An instance of C{cls}
+    @return: XXX 'spain this, Lucy
     """
-    obj = cls.__new__(cls)
+    classes = []
+    class_data = defaultdict(lambda:[])
     for prop, value in data:
-        prop.fromDatabase(obj, value)
-    return obj
+        if prop.cls not in classes:
+            classes.append(prop.cls)
+        class_data[prop.cls].append((prop, value))
+    
+    ret = []
+    for cls in classes:
+        obj = cls.__new__(cls)
+        ret.append(obj)
+        for prop, value in class_data[prop.cls]:
+            prop.fromDatabase(obj, value)
+
+    return ret[0]
 
 
 

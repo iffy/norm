@@ -12,6 +12,7 @@ from norm.patch import Patcher
 from norm.porcelain import makePool
 from norm.sqlite import SqliteOperator
 from norm.orm.props import Int, String, Unicode, Date, DateTime, Bool
+from norm.orm.expr import Query
 
 
 
@@ -143,6 +144,34 @@ class CommonTestsMixin(object):
 
         yield pool.runInteraction(oper.insert, empty)
         self.assertEqual(empty.name, '\x00\x01\x02hey\x00')
+
+
+    @defer.inlineCallbacks
+    def test_query_basic(self):
+        """
+        A basic query should work
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+        
+        e1 = Empty()
+        e1.name = '1'
+        yield pool.runInteraction(oper.insert, e1)
+
+        e2 = Empty()
+        e2.name = '2'
+        yield pool.runInteraction(oper.insert, e2)
+
+        items = yield pool.runInteraction(oper.query, Query(Empty))
+        self.assertEqual(len(items), 2)
+        items = sorted(items, key=lambda x:x.name)
+        
+        self.assertTrue(isinstance(items[0], Empty))
+        self.assertEqual(items[0].name, '1')
+
+        self.assertTrue(isinstance(items[1], Empty))
+        self.assertEqual(items[1].name, '2')
+
 
 
 

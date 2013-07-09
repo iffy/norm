@@ -260,7 +260,7 @@ class reconstituteTest(TestCase):
 
 
         zipped = zip([Foo.a, Foo.b], [1, 'hello'])
-        foo = reconstitute(Foo, zipped)
+        foo = reconstitute(zipped)
         self.assertTrue(isinstance(foo, Foo))
         self.assertEqual(foo.a, 1)
         self.assertEqual(foo.b, 'hello')
@@ -279,7 +279,7 @@ class reconstituteTest(TestCase):
                 self.init_called = True
 
 
-        foo = reconstitute(Foo, [(Foo.a, 'hey'), (Foo.b, 'something')])
+        foo = reconstitute([(Foo.a, 'hey'), (Foo.b, 'something')])
         self.assertTrue(isinstance(foo, Foo))
         self.assertEqual(foo.init_called, False, "Should not have called "
                          "__init__")
@@ -293,7 +293,7 @@ class reconstituteTest(TestCase):
             a = Property(fromDatabase=(lambda x:x+'db'))
 
 
-        foo = reconstitute(Foo, [(Foo.a, 'hey')])
+        foo = reconstitute([(Foo.a, 'hey')])
         self.assertEqual(foo.a, 'heydb')
 
 

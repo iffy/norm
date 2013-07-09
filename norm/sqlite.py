@@ -4,15 +4,10 @@
 from zope.interface import implements
 
 from norm.interface import IAsyncCursor, IOperator
-from norm.orm.base import classInfo, objectInfo, Converter
-from norm.orm.props import Int, String, Unicode, Bool, Date, DateTime
+from norm.orm.base import classInfo, objectInfo, Converter, reconstitute
+from norm.orm.props import String, Date, DateTime
 
-from datetime import datetime, date
-
-try:
-    from pysqlite2 import dbapi2 as sqlite
-except ImportError:
-    import sqlite3 as sqlite
+from datetime import datetime
 
 
 
@@ -135,6 +130,40 @@ class SqliteOperator(object):
                     prop.fromDatabase(obj, value)
             return obj
         d.addCallback(lambda row,obj: updateObject(obj, row), obj)
+        return d
+
+
+    def _makeSql(self, query):
+        clauses = []
+        args = []
+
+        # select
+        props = query.properties()
+        columns = [x.column_name for x in props]
+        clauses.append('SELECT %s' % (','.join(columns),))
+
+        # table
+        clauses.append('FROM %s' % (query.tables()[0],))
+
+        sql = ' '.join(clauses)
+        return sql, args
+
+
+    def _makeObjects(self, rows, query):
+        ret = []
+        props = query.properties()
+        for row in rows:
+            data = zip(props, row)
+            data = [(x[0], fromDB.convert(x[0].__class__, x[1])) for x in data]
+            ret.append(reconstitute(data))
+        return ret
+
+
+    def query(self, cursor, query):
+        select, args = self._makeSql(query)
+        
+        d = cursor.execute(select, tuple(args))
+        d.addCallback(self._makeObjects, query)
         return d
 
 
