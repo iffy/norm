@@ -1,6 +1,8 @@
 # Copyright (c) Matt Haggard.
 # See LICENSE for details.
 
+__all__ = ['sqlite']
+
 from zope.interface import implements
 
 from norm.interface import IAsyncCursor, IOperator
@@ -9,6 +11,11 @@ from norm.orm.props import String, Date, DateTime
 
 from datetime import datetime
 
+
+try:
+    from pysqlite2 import dbapi2 as sqlite
+except:
+    import sqlite3 as sqlite
 
 
 class SqliteCursorWrapper(object):
