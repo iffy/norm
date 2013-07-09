@@ -119,7 +119,7 @@ class PropertyTest(TestCase):
 
 
         class Foo(object):
-            a = Property(validator=validateInt)
+            a = Property(validators=[validateInt])
 
 
         foo = Foo()
