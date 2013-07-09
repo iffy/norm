@@ -125,11 +125,24 @@ class Property(object):
 
 
 
+def SQLTable(name):
+    """
+    Decorator for specifying the sql table 
+    """
+    def deco(cls):
+        _ClassInfo._tables[cls] = name
+        return cls
+    return deco
+
+
+
 class _ClassInfo(object):
 
+    _tables = {}
 
     def __init__(self, cls):
         self.cls = cls
+        self.table = None
         self.columns = defaultdict(lambda:[])
         self.attributes = {}
         self.primaries = []
@@ -137,6 +150,7 @@ class _ClassInfo(object):
 
 
     def _getInfo(self):
+        self.table = self._tables.get(self.cls, None)
         for k,v in inspect.getmembers(self.cls, lambda x:isinstance(x, Property)):
             self.columns[v.column_name].append(v)
             self.attributes[v.attr_name] = v

@@ -4,7 +4,7 @@
 from twisted.trial.unittest import TestCase
 
 from norm.porcelain import makePool
-from norm.orm import Property, classInfo, objectInfo
+from norm.orm import Property, classInfo, objectInfo, SQLTable
 
 
 
@@ -165,6 +165,19 @@ class classInfoTest(TestCase):
 
         info = classInfo(Foo)
         self.assertEqual(set(info.primaries), set([Foo.a, Foo.b, Foo.d]))
+
+
+    def test_table(self):
+        """
+        You can get the table a class maps to.
+        """
+        @SQLTable('foo')
+        class Foo(object):
+            pass
+
+
+        info = classInfo(Foo)
+        self.assertEqual(info.table, 'foo')
 
 
 
