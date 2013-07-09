@@ -84,10 +84,11 @@ class PropertyTest(TestCase):
 
         foo = Foo()
         foo.a = 'something'
+        Foo.a.fromDatabase(foo, 'another')
         Foo.b.fromDatabase(foo, 'something')
 
         info = objectInfo(foo)
-        self.assertEqual(info.changed(), [Foo.a], "Foo.b should not be "
+        self.assertEqual(info.changed(), [], "The attributes should not be "
                          "considered changed because the value came from the "
                          "database")
 
