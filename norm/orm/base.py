@@ -26,6 +26,7 @@ class Property(object):
         self._toDatabase = toDatabase or (lambda x:x)
         self._default_factory = default_factory
         self.validators = validators or []
+        self.validators.append(self._validate)
         self.primary = primary
 
 
@@ -68,6 +69,13 @@ class Property(object):
 
     def _values(self, obj):
         return self._value_dict.setdefault(obj, {})
+
+
+    def _validate(self, prop, obj, value):
+        """
+        Override this in subclasses for default validation.
+        """
+        return value
 
 
     def valueFor(self, obj):

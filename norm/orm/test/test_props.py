@@ -3,50 +3,96 @@
 
 from twisted.trial.unittest import TestCase
 
+from datetime import date, datetime
 
 from norm.orm.base import Property
-from norm.orm.props import Int
+from norm.orm.props import Int, Bool, Date, DateTime, String, Unicode
 
 
+class PropertyTestMixin(object):
 
-class IntTest(TestCase):
-
-
-    def test_Property(self):
-        """
-        It should behave like a property
-        """
-        self.assertTrue(issubclass(Int, Property))
+    property_class = None
+    good_values = []
+    bad_values = []
 
 
-    def test_int(self):
-        """
-        The int type will accept ints
-        """
+    def test_Property_Property(self):
+        self.assertTrue(issubclass(self.property_class, Property))
+
+
+    def test_Property_goodValues(self):
         class Foo(object):
-            a = Int()
+            a = self.property_class()
 
 
         foo = Foo()
-        foo.a = 12
-        self.assertEqual(foo.a, 12)
+        for value in self.good_values:
+            foo.a = value
+            self.assertEqual(foo.a, value)
 
 
-    def test_None(self):
+    def test_Property_badValues(self):
         class Foo(object):
-            a = Int()
-
-        foo = Foo()
-        foo.a = None
-        self.assertEqual(foo.a, None)
-
-
-    def test_nonInt(self):
-        class Foo(object):
-            a = Int()
+            a = self.property_class()
 
 
         foo = Foo()
-        bads = ['a', [], (), u'\N{SNOWMAN}', {}, True, False, 12.2]
-        for b in bads:
-            self.assertRaises(TypeError, setattr, foo, 'a', b)
+        for value in self.bad_values:
+            try:
+                foo.a = value
+            except TypeError:
+                # success
+                pass
+            else:
+                self.fail("It should be a TypeError to set %s to %r" % (
+                    self.property_class, value))
+
+
+
+
+class IntTest(PropertyTestMixin, TestCase):
+
+    property_class = Int
+    good_values = [None, 1, -1, 0, 10, 12L]
+    bad_values = ['a', u'b', [], (), {}, True, False, 12.2]
+
+
+
+class BoolTest(PropertyTestMixin, TestCase):
+
+    property_class = Bool
+    good_values = [None, True, False]
+    bad_values = ['a', u'b', 1, [], (), {}, 12.2]
+
+
+
+class DateTest(PropertyTestMixin, TestCase):
+
+    property_class = Date
+    good_values = [None, date(2001, 1, 2)]
+    bad_values = ['a', datetime(2001, 1, 1), [], (), False, 1, 12.1]
+
+
+
+class DateTimeTest(PropertyTestMixin, TestCase):
+
+    property_class = DateTime
+    good_values = [None, datetime(2001, 12, 1)]
+    bad_values = ['a', date(2001, 1, 1), [], (), False, 1, 12.1]
+
+
+
+class StringTest(PropertyTestMixin, TestCase):
+
+    property_class = String
+    good_values = [None, 'foo', u'\N{SNOWMAN}'.encode('utf-8')]
+    bad_values = [u'foo', date(2000, 1, 1), [], {}, False, 1, 12.1]
+
+
+class UnicodeTest(PropertyTestMixin, TestCase):
+
+    property_class = Unicode
+    good_values = [None, u'foo', u'\N{SNOWMAN}', 'foo'.decode('utf-8')]
+    bad_values = ['foo', 12, False, [], {}, object()]
+
+
