@@ -61,8 +61,8 @@ class IntTest(PropertyTestMixin, TestCase):
 class BoolTest(PropertyTestMixin, TestCase):
 
     property_class = Bool
-    good_values = [None, True, False]
-    bad_values = ['a', u'b', 1, [], (), {}, 12.2]
+    good_values = [None, True, False, 1, 0]
+    bad_values = ['a', u'b', [], (), {}, 12.2]
 
 
 

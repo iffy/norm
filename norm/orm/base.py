@@ -179,17 +179,6 @@ class Property(object):
 
 
 
-def SQLTable(name):
-    """
-    Decorator for specifying the sql table 
-    """
-    def deco(cls):
-        _ClassInfo._tables[cls] = name
-        return cls
-    return deco
-
-
-
 class _ClassInfo(object):
 
     _tables = {}
@@ -204,7 +193,7 @@ class _ClassInfo(object):
 
 
     def _getInfo(self):
-        self.table = self._tables.get(self.cls, None)
+        self.table = getattr(self.cls, '__sql_table__', None)
         for k,v in inspect.getmembers(self.cls, lambda x:isinstance(x, Property)):
             self.columns[v.column_name].append(v)
             self.attributes[v.attr_name] = v
@@ -276,6 +265,39 @@ def reconstitute(cls, data):
     for prop, value in data:
         prop.fromDatabase(obj, value)
     return obj
+
+
+
+class Converter(object):
+    """
+    I let you register conversion functions for types, then use the conversion
+    functions later by passing in the type.  See my tests for usage.
+    """
+
+    def __init__(self):
+        self.converters = defaultdict(lambda: [])
+
+
+    def when(self, key):
+        """
+        """
+        def deco(f):
+            self.converters[key].append(f)
+            return f
+        return deco
+
+
+    def convert(self, key, value):
+        """
+        XXX
+        """
+        for conv in self.converters[key]:
+            value = conv(value)
+        return value
+
+
+
+
 
 
 

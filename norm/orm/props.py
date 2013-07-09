@@ -23,9 +23,11 @@ class Bool(Property):
 
 
     def _validate(self, prop, obj, value):
-        if type(value) not in (bool, type(None)):
+        if value is None:
+            return None
+        if type(value) not in (bool, int):
             raise TypeError('%r must be a boolean, not %r' % (prop, value))
-        return value
+        return bool(value)
 
 
 

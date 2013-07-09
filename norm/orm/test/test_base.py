@@ -3,8 +3,8 @@
 
 from twisted.trial.unittest import TestCase
 
-from norm.orm.base import (Property, classInfo, objectInfo, SQLTable,
-                           reconstitute)
+from norm.orm.base import (Property, classInfo, objectInfo, reconstitute,
+                           Converter)
 
 
 
@@ -193,9 +193,8 @@ class classInfoTest(TestCase):
         """
         You can get the table a class maps to.
         """
-        @SQLTable('foo')
         class Foo(object):
-            pass
+            __sql_table__ = 'foo'
 
 
         info = classInfo(Foo)
@@ -297,6 +296,68 @@ class reconstituteTest(TestCase):
         foo = reconstitute(Foo, [(Foo.a, 'hey')])
         self.assertEqual(foo.a, 'heydb')
 
+
+
+class ConverterTest(TestCase):
+
+
+    def test_identity(self):
+        """
+        By default, values are left as is
+        """
+        conv = Converter()
+        val = conv.convert(Property, 'foo')
+        self.assertEqual(val, 'foo')
+
+
+    def test_function(self):
+        """
+        You can use a function for converting.
+        """
+        conv = Converter()
+
+        @conv.when(Property)
+        def converter(x):
+            return x + 'hey'
+
+        val = conv.convert(Property, 'foo')
+        self.assertEqual(val, 'foohey')
+
+
+    def test_multiple(self):
+        """
+        You can have multiple functions do conversion
+        """
+        conv = Converter()
+
+        @conv.when(Property)
+        def conv1(x):
+            return x + '1'
+
+        @conv.when(Property)
+        def conv2(x):
+            return x + '2'
+
+        val = conv.convert(Property, 'foo')
+        self.assertEqual(val, 'foo12')
+
+
+    def test_class(self):
+        """
+        Only the given key's converters should be used
+        """
+        conv = Converter()
+
+        @conv.when('A')
+        def convA(x):
+            return 'A'
+
+        @conv.when('B')
+        def convB(x):
+            return 'B'
+
+        self.assertEqual(conv.convert('A', 'something'), 'A')
+        self.assertEqual(conv.convert('B', 'something'), 'B')
 
 
 
