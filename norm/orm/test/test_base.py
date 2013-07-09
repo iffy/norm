@@ -4,7 +4,7 @@
 from twisted.trial.unittest import TestCase
 
 from norm.porcelain import makePool
-from norm.orm import Property, classInfo, objectInfo, SQLTable
+from norm.orm.base import Property, classInfo, objectInfo, SQLTable
 
 
 
