@@ -20,11 +20,12 @@ class Property(object):
 
 
     def __init__(self, column_name=None, primary=False, fromDatabase=None,
-                 toDatabase=None, default_factory=None):
+                 toDatabase=None, default_factory=None, validator=None):
         self.column_name = column_name
         self._fromDatabase = fromDatabase or (lambda x:x)
         self._toDatabase = toDatabase or (lambda x:x)
         self._default_factory = default_factory
+        self.validator = validator or (lambda prop,obj,val:val)
         self.primary = primary
 
 
@@ -43,7 +44,8 @@ class Property(object):
     def _setValue(self, obj, value, record_change=True):
         if not self.attr_name:
             self.cacheAttrName(obj.__class__)
-        self._values(obj)[self.attr_name] = value
+        new_value = self.validator(self, obj, value)
+        self._values(obj)[self.attr_name] = new_value
         if record_change:
             self._markChanged(obj)
 
@@ -156,7 +158,6 @@ class _ClassInfo(object):
             self.attributes[v.attr_name] = v
             if v.primary:
                 self.primaries.append(v)
-
 
 
 

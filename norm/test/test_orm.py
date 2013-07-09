@@ -108,6 +108,27 @@ class PropertyTest(TestCase):
         self.assertEqual(Foo.c.valueFor(foo), 10, "Should know about defaults")
 
 
+    def test_validate(self):
+        """
+        You can specify a validator
+        """
+        called = []
+        def validateInt(prop, obj, value):
+            called.append((prop, obj, value))
+            return 'foo'
+
+
+        class Foo(object):
+            a = Property(validator=validateInt)
+
+
+        foo = Foo()
+        foo.a = 12
+        self.assertEqual(called, [(Foo.a, foo, 12)])
+        self.assertEqual(foo.a, 'foo', "Should use the value returned by the "
+                         "validator")
+
+
 
 class classInfoTest(TestCase):
 
