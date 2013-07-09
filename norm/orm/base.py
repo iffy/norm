@@ -207,3 +207,23 @@ def objectInfo(obj):
     return _ObjectInfo(obj)
 
 
+
+def reconstitute(cls, data):
+    """
+    Reconstitute an object using data from a database.  This will not call
+    the C{__init__} method of C{cls}.
+
+    @param cls: The class of the object to reconstitute.
+    @param data: An iterable of 2-tuples (property, value) to be used to set
+        the values on the returned instance.
+
+    @return: An instance of C{cls}
+    """
+    obj = cls.__new__(cls)
+    for prop, value in data:
+        prop.fromDatabase(obj, value)
+    return obj
+
+
+
+

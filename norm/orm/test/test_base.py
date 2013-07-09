@@ -3,7 +3,8 @@
 
 from twisted.trial.unittest import TestCase
 
-from norm.orm.base import Property, classInfo, objectInfo, SQLTable
+from norm.orm.base import (Property, classInfo, objectInfo, SQLTable,
+                           reconstitute)
 
 
 
@@ -241,6 +242,60 @@ class objectInfoTest(TestCase):
         info = objectInfo(foo)
         changed = info.changed()
         self.assertEqual(changed, [Foo.a])
+
+
+
+
+
+class reconstituteTest(TestCase):
+
+
+    def test_tuple(self):
+        """
+        You can reconstitute a class with a tuple of attributes.
+        """
+        class Foo(object):
+            a = Property()
+            b = Property()
+
+
+        zipped = zip([Foo.a, Foo.b], [1, 'hello'])
+        foo = reconstitute(Foo, zipped)
+        self.assertTrue(isinstance(foo, Foo))
+        self.assertEqual(foo.a, 1)
+        self.assertEqual(foo.b, 'hello')
+
+
+    def test_init(self):
+        """
+        __init__ should not be called
+        """
+        class Foo(object):
+            a = Property()
+            b = Property()
+            init_called = False
+
+            def __init__(self):
+                self.init_called = True
+
+
+        foo = reconstitute(Foo, [(Foo.a, 'hey'), (Foo.b, 'something')])
+        self.assertTrue(isinstance(foo, Foo))
+        self.assertEqual(foo.init_called, False, "Should not have called "
+                         "__init__")
+
+
+    def test_fromDatabase(self):
+        """
+        The values should be mutated according to the rules of fromDatabase
+        """
+        class Foo(object):
+            a = Property(fromDatabase=(lambda x:x+'db'))
+
+
+        foo = reconstitute(Foo, [(Foo.a, 'hey')])
+        self.assertEqual(foo.a, 'heydb')
+
 
 
 
