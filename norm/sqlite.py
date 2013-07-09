@@ -8,6 +8,7 @@ from zope.interface import implements
 from norm.interface import IAsyncCursor, IOperator
 from norm.orm.base import classInfo, objectInfo, Converter, reconstitute
 from norm.orm.props import String, Date, DateTime
+from norm.orm.expr import compiler, State
 
 from datetime import datetime
 
@@ -51,6 +52,7 @@ class SqliteCursorWrapper(object):
 
 toDB = Converter()
 
+@toDB.when(str)
 @toDB.when(String)
 def stringToDB(pythonval):
     return buffer(pythonval)
@@ -144,13 +146,24 @@ class SqliteOperator(object):
         clauses = []
         args = []
 
+        state = State()
+        cls = query.classes()[0]
+        alias = state.tableAlias(cls)
+        cls_info = classInfo(cls)
+
         # select
         props = query.properties()
-        columns = [x.column_name for x in props]
+        columns = [alias+'.'+x.column_name for x in props]
         clauses.append('SELECT %s' % (','.join(columns),))
 
         # table
-        clauses.append('FROM %s' % (query.tables()[0],))
+        clauses.append('FROM %s AS %s' % (cls_info.table, alias))
+
+        # where
+        constraints = query.constraints
+        if constraints:
+            sql, args = compiler.compile(constraints, state)
+            clauses.append('WHERE %s' % (sql,))
 
         sql = ' '.join(clauses)
         return sql, args
