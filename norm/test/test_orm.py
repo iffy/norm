@@ -74,6 +74,24 @@ class PropertyTest(TestCase):
         self.assertEqual(foo.a, 'somethingpython')
 
 
+    def test_fromDatabase(self):
+        """
+        Setting a value from the database will mark it as not changed
+        """
+        class Foo(object):
+            a = Property()
+            b = Property()
+
+        foo = Foo()
+        foo.a = 'something'
+        Foo.b.fromDatabase(foo, 'something')
+
+        info = objectInfo(foo)
+        self.assertEqual(info.changed(), [Foo.a], "Foo.b should not be "
+                         "considered changed because the value came from the "
+                         "database")
+
+
     def test_valueOf(self):
         """
         You can get the value of a column
@@ -81,11 +99,13 @@ class PropertyTest(TestCase):
         class Foo(object):
             a = Property()
             b = Property()
+            c = Property(default_factory=lambda:10)
 
         foo = Foo()
         foo.b =  10
         self.assertEqual(Foo.a.valueFor(foo), None)
         self.assertEqual(Foo.b.valueFor(foo), 10)
+        self.assertEqual(Foo.c.valueFor(foo), 10, "Should know about defaults")
 
 
 
@@ -116,6 +136,36 @@ class classInfoTest(TestCase):
         self.assertEqual(info.columns['a'], [Bar.a])
         self.assertEqual(info.attributes['c'], Bar.c)
         self.assertEqual(info.attributes['a'], Bar.a)
+
+
+    def test_primary(self):
+        """
+        You can find primary keys
+        """
+        class Foo(object):
+            a = Property(primary=True)
+            b = Property()
+
+
+        info = classInfo(Foo)
+        self.assertEqual(info.primaries, [Foo.a])
+
+
+
+    def test_multiPrimary(self):
+        """
+        You can find multiple primary keys
+        """
+        class Foo(object):
+            a = Property(primary=True)
+            b = Property(primary=True)
+            c = Property()
+            d = Property(primary=True)
+
+
+        info = classInfo(Foo)
+        self.assertEqual(set(info.primaries), set([Foo.a, Foo.b, Foo.d]))
+
 
 
 class objectInfoTest(TestCase):
@@ -155,7 +205,6 @@ class objectInfoTest(TestCase):
             a = Property(default_factory=lambda:10)
 
         foo = Foo()
-        self.assertEqual(foo.a, 10)
         info = objectInfo(foo)
         changed = info.changed()
         self.assertEqual(changed, [Foo.a])
