@@ -3,7 +3,6 @@
 
 from twisted.trial.unittest import TestCase
 
-from norm.porcelain import makePool
 from norm.orm.base import Property, classInfo, objectInfo, SQLTable
 
 
