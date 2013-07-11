@@ -8,7 +8,7 @@ from zope.interface import implements
 from norm.interface import IAsyncCursor, IOperator
 from norm.orm.base import classInfo, objectInfo, Converter, reconstitute
 from norm.orm.props import String, Date, DateTime
-from norm.orm.expr import compiler, State, Compiler, Query, Join, Table
+from norm.orm.expr import compiler, Compiler, Query, Table
 from norm.orm.error import NotFound
 
 from datetime import datetime

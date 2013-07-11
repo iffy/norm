@@ -6,8 +6,9 @@ from twisted.trial.unittest import TestCase
 from datetime import date, datetime
 
 from norm.orm.base import Property
-from norm.orm.expr import (Compiler, State, CompileError, compiler, Comparison,
-                           Eq, Neq, And, Or, Join, Table)
+from norm.orm.expr import (Compiler, State, CompileError, Comparison,
+                           Eq, Neq, And, Or, Join, Table,
+                           compiler as base_compiler)
 
 
 
@@ -151,12 +152,12 @@ class CompilerTest(TestCase):
 
 
         @fallback.when(str)
-        def foo(x, state):
+        def bar(x, state):
             return x + ' fallback', state
 
 
         @fallback.when(list)
-        def foo(x, state):
+        def baz(x, state):
             return x + ['fallback'], state
 
 
@@ -179,33 +180,33 @@ class compilerTest(TestCase):
 
 
     def test_str(self):
-        self.assertEqual(compiler.compile('a'), ('?', ('a',)))
+        self.assertEqual(base_compiler.compile('a'), ('?', ('a',)))
 
 
     def test_unicode(self):
-        self.assertEqual(compiler.compile(u'a'), ('?', (u'a',)))
+        self.assertEqual(base_compiler.compile(u'a'), ('?', (u'a',)))
 
 
     def test_int(self):
-        self.assertEqual(compiler.compile(10), ('?', (10,)))
+        self.assertEqual(base_compiler.compile(10), ('?', (10,)))
 
 
     def test_date(self):
-        self.assertEqual(compiler.compile(date(2000, 1, 1)),
+        self.assertEqual(base_compiler.compile(date(2000, 1, 1)),
                          ('?', (date(2000, 1, 1),)))
 
 
     def test_datetime(self):
-        self.assertEqual(compiler.compile(datetime(2001, 1, 1)),
+        self.assertEqual(base_compiler.compile(datetime(2001, 1, 1)),
                          ('?', (datetime(2001, 1, 1),)))
 
 
     def test_bool(self):
-        self.assertEqual(compiler.compile(True), ('?', (True,)))
+        self.assertEqual(base_compiler.compile(True), ('?', (True,)))
 
 
     def test_None(self):
-        self.assertEqual(compiler.compile(None), ('NULL', ()))
+        self.assertEqual(base_compiler.compile(None), ('NULL', ()))
 
 
     def test_Property(self):
@@ -213,45 +214,45 @@ class compilerTest(TestCase):
             __sql_table__ = 'hey'
             id = Property()
 
-        self.assertEqual(compiler.compile(Foo.id), ('a.id', ()))
+        self.assertEqual(base_compiler.compile(Foo.id), ('a.id', ()))
 
 
     def test_Comparison(self):
         c = Comparison('a', 'b')
         c.op = 'hey'
-        self.assertEqual(compiler.compile(c), ('? hey ?', ('a', 'b')))
+        self.assertEqual(base_compiler.compile(c), ('? hey ?', ('a', 'b')))
 
 
     def test_Eq_None(self):
-        self.assertEqual(compiler.compile(Eq('hey', None)),
+        self.assertEqual(base_compiler.compile(Eq('hey', None)),
                          ('? IS NULL', ('hey',)))
-        self.assertEqual(compiler.compile(Eq(None, 'hey')),
+        self.assertEqual(base_compiler.compile(Eq(None, 'hey')),
                          ('NULL IS ?', ('hey',)))
-        self.assertEqual(compiler.compile(Eq(None, None)),
+        self.assertEqual(base_compiler.compile(Eq(None, None)),
                          ('NULL IS NULL', ()))
 
 
     def test_Neq_None(self):
-        self.assertEqual(compiler.compile(Neq('hey', None)),
+        self.assertEqual(base_compiler.compile(Neq('hey', None)),
                          ('? IS NOT NULL', ('hey',)))
-        self.assertEqual(compiler.compile(Neq(None, 'hey')),
+        self.assertEqual(base_compiler.compile(Neq(None, 'hey')),
                          ('NULL IS NOT ?', ('hey',)))
-        self.assertEqual(compiler.compile(Neq(None, None)),
+        self.assertEqual(base_compiler.compile(Neq(None, None)),
                          ('NULL IS NOT NULL', ()))
 
 
     def test_And(self):
-        self.assertEqual(compiler.compile(And('hey', 'ho', 'ha')),
+        self.assertEqual(base_compiler.compile(And('hey', 'ho', 'ha')),
                          ('(? AND ? AND ?)', ('hey', 'ho', 'ha')))
 
 
     def test_Or(self):
-        self.assertEqual(compiler.compile(Or('hey', 'ho', 'ha')),
+        self.assertEqual(base_compiler.compile(Or('hey', 'ho', 'ha')),
                          ('(? OR ? OR ?)', ('hey', 'ho', 'ha')))
 
 
     def test_And_Or(self):
-        self.assertEqual(compiler.compile(And(1, Or(2, 3), Or(4, And(5, 6)))),
+        self.assertEqual(base_compiler.compile(And(1, Or(2, 3), Or(4, And(5, 6)))),
                          ('(? AND (? OR ?) AND (? OR (? AND ?)))', (1,2,3,4,5,6)))
 
 
@@ -260,7 +261,7 @@ class compilerTest(TestCase):
             __sql_table__ = 'something'
             id = Property()
 
-        sql, args = compiler.compile(Join(Foo, Eq(Foo.id, 10)))
+        sql, args = base_compiler.compile(Join(Foo, Eq(Foo.id, 10)))
         self.assertEqual(sql, 'JOIN something AS a ON a.id = ?')
         self.assertEqual(args, (10,))
 
@@ -269,7 +270,7 @@ class compilerTest(TestCase):
         class Foo(object):
             __sql_table__ = 'foo'
 
-        sql, args = compiler.compile(Table(Foo))
+        sql, args = base_compiler.compile(Table(Foo))
         self.assertEqual(sql, 'foo AS a')
 
 
