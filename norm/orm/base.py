@@ -129,7 +129,7 @@ class Property(object):
         """
         Get a list of changes on this object (not just for this property).
         """
-        for prop in classInfo(obj.__class__).attributes.values():
+        for prop in classInfo(obj).attributes.values():
             # this is so that default values are populated
             prop.valueFor(obj)
         return self._changes.setdefault(obj, [])
@@ -210,6 +210,8 @@ class _ClassInfo(object):
 
 def classInfo(cls):
     # XXX implement caching if it's a big deal
+    if not inspect.isclass(cls):
+        cls = cls.__class__
     return _ClassInfo(cls)
 
 
@@ -228,7 +230,7 @@ class _ObjectInfo(object):
         """
         Get a list of properties on my object that have changed.
         """
-        cls_info = classInfo(self.obj.__class__)
+        cls_info = classInfo(self.obj)
         # XXX it's a little weird that you can get to this through any
         # attribute.
         prop = cls_info.attributes.values()[0]
@@ -298,7 +300,7 @@ def updateObjectFromDatabase(data, obj, converter):
     """
     if data is None:
         raise NotFound(obj)
-    for name, props in classInfo(obj.__class__).columns.items():
+    for name, props in classInfo(obj).columns.items():
         if name not in data.keys():
             continue
         for prop in props:
@@ -395,7 +397,7 @@ class BaseOperator(object):
 
         @param obj: Object to update
         """
-        info = classInfo(obj.__class__)
+        info = classInfo(obj)
         
         args = []
         
@@ -421,7 +423,7 @@ class BaseOperator(object):
         @param obj: Object to get attributes for updating from.
         """
         obj_info = objectInfo(obj)
-        info = classInfo(obj.__class__)
+        info = classInfo(obj)
         changed = obj_info.changed()
 
         # XXX I copied and modified this from insert
@@ -454,7 +456,7 @@ class BaseOperator(object):
 
         @param obj: Object to delete.
         """
-        info = classInfo(obj.__class__)
+        info = classInfo(obj)
 
         # XXX I copied this from refresh
         # XXX REFACTOR

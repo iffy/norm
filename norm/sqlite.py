@@ -114,7 +114,7 @@ class SqliteOperator(BaseOperator):
         an asynchronous interaction.
         """
         info = objectInfo(obj)
-        cls_info = classInfo(obj.__class__)
+        cls_info = classInfo(obj)
         changed = info.changed()
 
         # insert

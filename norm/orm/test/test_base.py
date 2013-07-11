@@ -201,6 +201,21 @@ class classInfoTest(TestCase):
         self.assertEqual(info.table, 'foo')
 
 
+    def test_object(self):
+        """
+        You can get the class info from an instance.
+        """
+        class Foo(object):
+            __sql_table__ = 'foo'
+            a = Property(primary=True)
+
+
+        foo = Foo()
+        info = classInfo(foo)
+        self.assertEqual(info.table, 'foo')
+        self.assertEqual(info.primaries, [Foo.a])
+
+
 
 class objectInfoTest(TestCase):
 

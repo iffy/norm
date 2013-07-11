@@ -101,7 +101,7 @@ class PostgresOperator(BaseOperator):
         asynchronous interaction.
         """
         info = objectInfo(obj)
-        cls_info = classInfo(obj.__class__)
+        cls_info = classInfo(obj)
         changed = info.changed()
 
         # insert
