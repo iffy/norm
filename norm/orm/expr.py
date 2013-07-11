@@ -132,6 +132,21 @@ class Compiler(object):
 compiler = Compiler()
 
 
+class Table(object):
+    """
+    XXX
+    """
+
+    def __init__(self, cls):
+        self.cls = cls
+
+
+@compiler.when(Table)
+def compile_Table(table, state):
+    info = classInfo(table.cls)
+    return '%s AS %s' % (info.table, state.tableAlias(table.cls)), ()
+
+
 @compiler.when(Property)
 def compile_Property(x, state):
     alias = state.tableAlias(x.cls)

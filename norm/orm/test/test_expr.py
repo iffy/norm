@@ -7,7 +7,7 @@ from datetime import date, datetime
 
 from norm.orm.base import Property
 from norm.orm.expr import (Compiler, State, CompileError, compiler, Comparison,
-                           Eq, Neq, And, Or, Join)
+                           Eq, Neq, And, Or, Join, Table)
 
 
 
@@ -263,6 +263,14 @@ class compilerTest(TestCase):
         sql, args = compiler.compile(Join(Foo, Eq(Foo.id, 10)))
         self.assertEqual(sql, 'JOIN something AS a ON a.id = ?')
         self.assertEqual(args, (10,))
+
+
+    def test_Table(self):
+        class Foo(object):
+            __sql_table__ = 'foo'
+
+        sql, args = compiler.compile(Table(Foo))
+        self.assertEqual(sql, 'foo AS a')
 
 
 

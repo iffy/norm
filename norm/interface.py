@@ -99,3 +99,21 @@ class IOperator(Interface):
         """
 
 
+    def query(cursor, query):
+        """
+        XXX
+        """
+
+
+    def refresh(cursor, obj):
+        """
+        XXX
+        """
+
+
+    def update(cursor, obj):
+        """
+        XXX
+        """
+
+

@@ -56,6 +56,7 @@ class FavoriteBook(object):
     __sql_table__ = 'favorite_book'
     child_id = Int(primary=True)
     book_id = Int(primary=True)
+    stars = Int()
 
     def __init__(self, child_id=None, book_id=None):
         self.child_id = child_id
@@ -367,6 +368,68 @@ class CommonTestsMixin(object):
         self.assertEqual(row.name, u'Around the World in 80 Days')
 
 
+    @defer.inlineCallbacks
+    def test_refresh(self):
+        """
+        You can get an object by id
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        obj = Empty()
+        obj.name = 'hello'
+        obj = yield pool.runInteraction(oper.insert, obj)
+
+        fresh = Empty()
+        fresh.id = obj.id
+
+        obj2 = yield pool.runInteraction(oper.refresh, fresh)
+        self.assertEqual(obj2, fresh, "Should return the same instance")
+        self.assertEqual(obj2.name, 'hello', "Should update attributes")
+
+
+    @defer.inlineCallbacks
+    def test_refresh_multiPrimary(self):
+        """
+        You can get an object by compound primary key
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        obj = FavoriteBook(3, 12)
+        obj.stars = 800
+        yield pool.runInteraction(oper.insert, obj)
+
+        fresh = FavoriteBook(3, 12)
+        obj2 = yield pool.runInteraction(oper.refresh, fresh)
+        self.assertEqual(obj2, fresh)
+        self.assertEqual(obj2.stars, 800)
+
+
+
+    @defer.inlineCallbacks
+    def test_update(self):
+        """
+        You can update a row using an object
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        obj = Empty()
+        yield pool.runInteraction(oper.insert, obj)
+
+        obj.name = 'new name'
+        obj.uni = u'unicycle'
+        obj.date = date(2000, 1, 1)
+        yield pool.runInteraction(oper.update, obj)
+
+        obj2 = Empty()
+        obj2.id = obj.id
+        yield pool.runInteraction(oper.refresh, obj2)
+        self.assertEqual(obj2.name, 'new name')
+        self.assertEqual(obj2.uni, u'unicycle')
+        self.assertEqual(obj2.date, date(2000, 1, 1))
+
 
 
 class SqliteOperatorTest(CommonTestsMixin, TestCase):
@@ -401,6 +464,7 @@ class SqliteOperatorTest(CommonTestsMixin, TestCase):
         '''CREATE TABLE favorite_book (
             child_id INTEGER,
             book_id INTEGER,
+            stars INTEGER,
             PRIMARY KEY (child_id, book_id)
         )''',
         '''CREATE TABLE book (

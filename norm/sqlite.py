@@ -8,7 +8,7 @@ from zope.interface import implements
 from norm.interface import IAsyncCursor, IOperator
 from norm.orm.base import classInfo, objectInfo, Converter, reconstitute
 from norm.orm.props import String, Date, DateTime
-from norm.orm.expr import compiler, State, Compiler, Query, Join
+from norm.orm.expr import compiler, State, Compiler, Query, Join, Table
 
 from datetime import datetime
 
@@ -103,7 +103,7 @@ def compile_Query(query, state):
     where_args = []
     constraints = query.constraints
     if constraints:
-        s, a = compiler.compile(constraints, state)
+        s, a = state.compile(constraints)
         where_clause = ['WHERE %s' % (s,)]
         where_args.extend(a)
 
@@ -112,9 +112,10 @@ def compile_Query(query, state):
     from_args = []
     tables = []
     for cls in classes:
-        info = classInfo(cls)
-        state.tableAlias(cls)
-        tables.append('%s AS %s' % (info.table, state.tableAlias(cls)))
+        s, a = state.compile(Table(cls))
+        tables.append(s)
+        from_args.extend(a)
+
     from_clause = ['FROM %s' % (','.join(tables))]
     
 
@@ -167,17 +168,7 @@ class SqliteOperator(object):
         d.addCallback(lambda _: cursor.lastRowId())
         d.addCallback(lambda rowid: cursor.execute(select, (rowid,)))
         d.addCallback(lambda _: cursor.fetchone())
-
-        # XXX this belongs in a common place
-        def updateObject(obj, data):
-            for name, props in classInfo(obj.__class__).columns.items():
-                if name not in data.keys():
-                    continue
-                for prop in props:
-                    value = fromDB.convert(prop.__class__, data[name])
-                    prop.fromDatabase(obj, value)
-            return obj
-        d.addCallback(lambda row,obj: updateObject(obj, row), obj)
+        d.addCallback(self._updateObject, obj)
         return d
 
 
@@ -191,14 +182,79 @@ class SqliteOperator(object):
         return ret
 
 
+    def _updateObject(self, data, obj):
+        for name, props in classInfo(obj.__class__).columns.items():
+            if name not in data.keys():
+                continue
+            for prop in props:
+                value = fromDB.convert(prop.__class__, data[name])
+                prop.fromDatabase(obj, value)
+        return obj
+
+
     def query(self, cursor, query):
+        """
+        XXX
+        """
         sql, args = sqlite_compiler.compile(query)
-        
-        
-        print sql, args
         d = cursor.execute(sql, tuple(args))
         d.addCallback(self._makeObjects, query)
         return d
+
+
+    def refresh(self, cursor, obj):
+        """
+        XXX
+        """
+        info = classInfo(obj.__class__)
+        
+        args = []
+        
+        where_parts = []
+        for prop in info.primaries:
+            where_parts.append('%s=?' % (prop.column_name,))
+            args.append(toDB.convert(prop.__class__, prop.toDatabase(obj)))
+        
+        columns = info.columns.keys()
+        select = 'SELECT %s FROM %s WHERE %s' % (','.join(columns),
+                  info.table, ' AND '.join(where_parts))
+
+        d = cursor.execute(select, tuple(args))
+        d.addCallback(lambda _: cursor.fetchone())
+        d.addCallback(self._updateObject, obj)
+        return d
+
+
+    def update(self, cursor, obj):
+        """
+        XXX
+        """
+        obj_info = objectInfo(obj)
+        info = classInfo(obj.__class__)
+        changed = obj_info.changed()
+
+        # XXX I copied and modified this from insert
+        set_parts = []
+        set_args = []
+        for prop in changed:
+            set_parts.append('%s=?' % (prop.column_name,))
+            value = toDB.convert(prop.__class__, prop.toDatabase(obj))
+            set_args.append(value)
+
+        # XXX I copied this from refresh
+        # XXX REFACTOR
+        where_parts = []
+        where_args = []
+        for prop in info.primaries:
+            where_parts.append('%s=?' % (prop.column_name,))
+            where_args.append(toDB.convert(prop.__class__, prop.toDatabase(obj)))
+
+        update = 'UPDATE %s SET %s WHERE %s' % (info.table,
+                 ','.join(set_parts),
+                 ' AND '.join(where_parts))
+        args = tuple(set_args + where_args)
+
+        return cursor.execute(update, args)
 
 
 
