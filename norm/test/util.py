@@ -2,6 +2,8 @@
 # See LICENSE for details.
 
 from twisted.trial.unittest import SkipTest
+
+from norm.uri import mkConnStr, parseURI
 import os
 
 
