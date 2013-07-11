@@ -82,3 +82,47 @@ class IPool(Interface):
         """
         Accept an option as ready
         """
+
+
+
+class IOperator(Interface):
+    """
+    I provide functions for doing operations.  My methods are suitable for
+    use as the function in L{IRunner.runInteraction}.
+    """
+
+
+    def insert(cursor, obj):
+        """
+        Insert the ORM object into the database, update the object's attributes
+        and return the object.
+        """
+
+
+    def query(cursor, query):
+        """
+        XXX
+        """
+
+
+    def refresh(cursor, obj):
+        """
+        XXX
+        """
+
+
+    def update(cursor, obj):
+        """
+        XXX
+        """
+
+
+    def delete(cursor, obj):
+        """
+        XXX
+        """
+
+
+
+
+
