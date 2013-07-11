@@ -6,13 +6,16 @@ python:
     - "2.6"
     - "2.7"
 
+env:
+    - NORM_POSTGRESQL_URI=postgres://postgres@127.0.0.1:5432/foo REQUIREMENTS=requirements.txt
+    - NORM_POSTGRESQL_URI=postgres://postgres@127.0.0.1:5432/foo REQUIREMENTS=optionalrequirements.txt
+
 install:
-    - "pip install -r requirements.txt --use-mirrors"
-    - "pip install -r optionalrequirements.txt --use-mirrors"
+    - "pip install -r $REQUIREMENTS --use-mirrors"
 
 before_script:
     - psql -c 'create database foo;' -U postgres
 
-env: NORM_POSTGRESQL_URI=postgres://postgres@127.0.0.1:5432/foo
+
 
 script: trial norm
