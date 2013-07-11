@@ -30,6 +30,10 @@ class IAsyncCursor(Interface):
         """
 
 
+    def close():
+        pass
+
+
 
 class IRunner(Interface):
     """
@@ -54,6 +58,13 @@ class IRunner(Interface):
         Run a function within a database transaction.  The function will be
         passed an L{IAsyncCursor} as the first arg.
         """
+
+
+    def close():
+        """
+        Close the connections
+        """
+
 
 
 class IPool(Interface):
@@ -81,6 +92,12 @@ class IPool(Interface):
     def done(option):
         """
         Accept an option as ready
+        """
+
+
+    def list():
+        """
+        List all the things
         """
 
 

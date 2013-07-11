@@ -28,7 +28,8 @@ class PostgresCursorWrapper(object):
 
     def execute(self, sql, params=()):
         sql = translateSQL(sql)
-        return self.cursor.execute(sql, params)
+        ret = self.cursor.execute(sql, params)
+        return ret
 
 
     def lastRowId(self):
@@ -43,6 +44,11 @@ class PostgresCursorWrapper(object):
 
     def fetchall(self):
         return self.cursor.fetchall()
+
+
+    def close(self):
+        return self.cursor.close()
+
 
 
 toDB = Converter()

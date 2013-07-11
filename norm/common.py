@@ -39,6 +39,10 @@ class BlockingCursor(object):
         return defer.succeed(self.cursor.lastrowid)
 
 
+    def close(self):
+        return defer.maybeDeferred(self.cursor.close)
+
+
 
 class BlockingRunner(object):
     """
@@ -93,6 +97,10 @@ class BlockingRunner(object):
         return result
 
 
+    def close(self):
+        return defer.maybeDeferred(self.conn.close)
+
+
 
 class ConnectionPool(object):
 
@@ -135,7 +143,13 @@ class ConnectionPool(object):
         m = getattr(conn, name)
         d = m(*args, **kwargs)
         return d.addBoth(self._finish, conn)
-        
+
+
+    def close(self):
+        dlist = []
+        for item in self.pool.list():
+            dlist.append(defer.maybeDeferred(item.close))
+        return defer.gatherResults(dlist)        
 
 
 
@@ -151,18 +165,21 @@ class NextAvailablePool(object):
 
     def __init__(self):
         self._options = deque()
+        self._all_options = []
         self._pending = deque()
         self._pending_removal = defaultdict(lambda:[])
 
 
     def add(self, option):
         self._options.append(option)
+        self._all_options.append(option)
         self._fulfillNextPending()
 
 
     def remove(self, option):
         try:
             self._options.remove(option)
+            self._all_options.remove(option)
             return defer.succeed(option)
         except ValueError:
             d = defer.Deferred()
@@ -189,6 +206,10 @@ class NextAvailablePool(object):
             return
         self._options.append(option)
         self._fulfillNextPending()
+
+
+    def list(self):
+        return self._all_options
 
 
 

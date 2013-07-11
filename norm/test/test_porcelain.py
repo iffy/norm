@@ -28,6 +28,7 @@ class PostgresTest(TestCase):
     @defer.inlineCallbacks
     def test_basic(self):
         pool = yield makePool(postgres_url)
+        self.addCleanup(pool.close)
         yield pool.runOperation('''CREATE TEMPORARY TABLE porc1 (
             id serial primary key,
             created timestamp default current_timestamp,
@@ -48,10 +49,12 @@ class PostgresTest(TestCase):
     @defer.inlineCallbacks
     def test_insert(self):
         pool = yield makePool(postgres_url)
+        self.addCleanup(pool.close)
         yield pool.runOperation('''CREATE TEMPORARY TABLE porc2 (
             id serial primary key,
             name text
         )''')
+
 
         rowid = yield insert(pool, 'insert into porc2 (name) values (?)', ('bob',))
         self.assertEqual(rowid, 1)
@@ -67,6 +70,7 @@ class SqliteTest(TestCase):
     @defer.inlineCallbacks
     def test_basic(self):
         pool = yield makePool('sqlite:')
+        self.addCleanup(pool.close)
         yield pool.runOperation('''CREATE TABLE porc1 (
             id integer primary key,
             created timestamp default current_timestamp,
@@ -87,6 +91,7 @@ class SqliteTest(TestCase):
     @defer.inlineCallbacks
     def test_insert(self):
         pool = yield makePool('sqlite:')
+        self.addCleanup(pool.close)
         yield pool.runOperation('''CREATE TABLE porc2 (
             id integer primary key,
             name text

@@ -68,6 +68,18 @@ class BlockingCursorTest(TestCase):
         return d
 
 
+    def test_close(self):
+        """
+        You can close the cursor
+        """
+        mock = MagicMock()
+        mock.close = MagicMock()
+        cursor = BlockingCursor(mock)
+        d = cursor.close()
+        d.addCallback(lambda _: mock.close.assert_called_once_with())
+        return d
+
+
 
 class BlockingRunnerTest(TestCase):
 
@@ -81,6 +93,18 @@ class BlockingRunnerTest(TestCase):
 
     def test_cursorFactory(self):
         self.assertEqual(BlockingRunner.cursorFactory, BlockingCursor)
+
+
+    def test_close(self):
+        """
+        You can close the runner
+        """
+        mock = MagicMock()
+        runner = BlockingRunner(mock)
+
+        d = runner.close()
+        d.addCallback(lambda _: mock.close.assert_called_once_with())
+        return d
 
 
     def test_runInteraction(self):
@@ -247,6 +271,23 @@ class ConnectionPoolTest(TestCase):
         self.assertIsInstance(self.failureResultOf(d).value, Exception)
 
 
+    def test_close(self):
+        """
+        You can close all the connections
+        """
+        c1 = MagicMock()
+        c2 = MagicMock()
+
+        pool = ConnectionPool()
+        pool.add(c1)
+        pool.add(c2)
+
+        d = pool.close()
+        d.addCallback(lambda _: c1.close.assert_called_once_with())
+        d.addCallback(lambda _: c2.close.assert_called_once_with())
+        return d
+
+
 
 class NextAvailablePoolTest(TestCase):
 
@@ -337,6 +378,24 @@ class NextAvailablePoolTest(TestCase):
         pool.done(a)
         self.assertEqual(self.successResultOf(b), 'foo')
         self.assertEqual(self.successResultOf(c), 'foo')
+
+
+    @defer.inlineCallbacks
+    def test_list(self):
+        """
+        You can list all the things in the pool
+        """
+        pool = NextAvailablePool()
+        pool.add('foo')
+        pool.add('bar')
+        b = yield pool.get()
+        pool.add('choo')
+        pool.add('bozo')
+        yield pool.remove('bozo')
+
+        r = pool.list()
+        self.assertEqual(set(r), set(['foo', 'bar', 'choo']))
+
 
 
 

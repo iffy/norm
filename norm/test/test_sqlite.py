@@ -45,4 +45,8 @@ class SqliteCursorWrapperTest(TestCase):
         self.assertCallThrough('lastRowId')
 
 
+    def test_close(self):
+        self.assertCallThrough('close')
+
+
 

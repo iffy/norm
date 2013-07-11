@@ -57,6 +57,10 @@ class PostgresCursorWrapperTest(TestCase):
         self.assertCallThrough('fetchall')
 
 
+    def test_close(self):
+        self.assertCallThrough('close')
+
+
 
 class PostgresCursorWrapperFunctionalTest(TestCase):
 
@@ -82,4 +86,5 @@ class PostgresCursorWrapperFunctionalTest(TestCase):
             self.assertEqual(rowid, 1, "Should return last inserted row id")
 
         return d.addCallback(check)
+
 

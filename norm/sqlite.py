@@ -52,6 +52,10 @@ class SqliteCursorWrapper(object):
         return self.cursor.lastRowId()
 
 
+    def close(self):
+        return self.cursor.close()
+
+
 
 toDB = Converter()
 

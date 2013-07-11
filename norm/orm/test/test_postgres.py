@@ -70,6 +70,7 @@ class PostgresFunctionalOperatorTest(FunctionalIOperatorTestsMixin, TestCase):
     def deleteData(self, pool):
         for table in self.tables:
             yield pool.runOperation('DELETE FROM %s' % (table,))
+        yield pool.close()
 
 
     def getOperator(self):
