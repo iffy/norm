@@ -383,7 +383,7 @@ class BaseOperator(object):
         @param query: A L{Query} instance.
         """
         sql, args = self.compiler.compile(query)
-        d = cursor.execute(sql, tuple(args))
+        d = cursor.execute(sql, tuple([self.toDB.convert(type(x), x) for x in args]))
         d.addCallback(lambda _: cursor.fetchall())
         d.addCallback(self._makeObjects, query)
         return d

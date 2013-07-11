@@ -102,7 +102,7 @@ class ormHandleMixin(object):
 
 
     class Foo(object):
-        __sql_table__ = 'foo'
+        __sql_table__ = 'porc3'
         id = Int(primary=True)
         age = Int()
 
@@ -231,7 +231,7 @@ class SqliteOrmHandleTest(ormHandleMixin, TestCase):
 
     patcher = Patcher()
     patcher.add('foo', [
-        '''CREATE TABLE foo (
+        '''CREATE TABLE porc3 (
             id INTEGER PRIMARY KEY,
             age INTEGER
         )''',
@@ -240,6 +240,7 @@ class SqliteOrmHandleTest(ormHandleMixin, TestCase):
     @defer.inlineCallbacks
     def getPool(self):
         pool = yield makePool('sqlite:')
+        self.addCleanup(pool.close)
         yield self.patcher.upgrade(pool)
         defer.returnValue(pool)
 
@@ -253,15 +254,21 @@ class PostgresOrmHandleTest(ormHandleMixin, TestCase):
 
     patcher = Patcher()
     patcher.add('foo', [
-        '''CREATE TABLE foo (
+        '''CREATE TABLE porc3 (
             id SERIAL PRIMARY KEY,
             age INTEGER
         )''',
     ])
 
+    def cleanTable(self, pool):
+        d = pool.runOperation('delete from porc3')
+        return d.addCallback(lambda _: pool.close())
+
+
     @defer.inlineCallbacks
     def getPool(self):
         pool = yield makePool(postgres_url)
+        self.addCleanup(self.cleanTable, pool)
         yield self.patcher.upgrade(pool)
         defer.returnValue(pool)
 
