@@ -192,6 +192,14 @@ class ConnectionPoolTest(TestCase):
         verifyObject(IRunner, ConnectionPool())
 
 
+    def test_scheme(self):
+        """
+        Should be aware of its database scheme
+        """
+        pool = ConnectionPool()
+        self.assertEqual(pool.db_scheme, None)
+
+
     def test_add(self):
         """
         You can add connections to a pool

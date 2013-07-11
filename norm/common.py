@@ -107,6 +107,8 @@ class ConnectionPool(object):
 
     implements(IRunner)
 
+    db_scheme = None
+
 
     def __init__(self, pool=None):
         self.pool = pool or NextAvailablePool()
