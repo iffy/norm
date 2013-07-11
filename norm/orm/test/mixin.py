@@ -231,6 +231,22 @@ class FunctionalIOperatorTestsMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_query_Eq_str(self):
+        """
+        You can query by equality of a string
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        e1 = Empty()
+        e1.name = '1'
+        yield pool.runInteraction(oper.insert, e1)
+
+        items = yield pool.runInteraction(oper.query,
+                Query(Empty, Eq(Empty.name, '1')))
+
+
+    @defer.inlineCallbacks
     def test_query_autoJoin(self):
         """
         You can query across two tables with the default SQL join

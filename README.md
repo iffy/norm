@@ -165,3 +165,174 @@ migrations.
     task.react(main, [])
 
 <!--- end -->
+
+
+## ORM ##
+
+Included is an intentionally feature-deficient, lightweight ORM.  It makes doing
+CRUD operations nicer.  Also, the network interaction is seperate from the
+ORMness, so that you could reuse the ORM-ness in a synchronous environment.
+
+Here's an example:
+
+
+<!--- test:orm_example -->
+
+    from twisted.internet.task import react
+    from twisted.internet import defer
+    from norm import makePool
+    from norm.orm.props import Int, Unicode
+    from norm.orm.expr import Query, Eq
+    from norm.sqlite import SqliteOperator
+    from norm.patch import Patcher
+
+
+    class Author(object):
+        __sql_table__ = 'author'
+        id = Int(primary=True)
+        name = Unicode()
+
+        def __init__(self, name):
+            self.name = name
+
+
+    class Book(object):
+        __sql_table__ = 'book'
+        id = Int(primary=True)
+        title = Unicode()
+        author_id = Int()
+
+        def __init__(self, title, author_id):
+            self.title = title
+            self.author_id = author_id
+
+
+    class BookCharacter(object):
+        __sql_table__ = 'book_character'
+        book_id = Int(primary=True)
+        character_id = Int(primary=True)
+
+        def __init__(self, book_id, character_id):
+            self.book_id = book_id
+            self.character_id = character_id
+
+
+    class Character(object):
+        __sql_table__ = 'character'
+        id = Int(primary=True)
+        name = Unicode()
+
+        def __init__(self, name):
+            self.name = name
+
+
+    patcher = Patcher()
+    patcher.add('tables', [
+        '''create table author (
+            id integer primary key,
+            name text
+        )''',
+        '''create table book (
+            id integer primary key,
+            title text,
+            author_id integer 
+        )''',
+        '''create table book_character (
+            book_id integer,
+            character_id integer,
+            primary key (book_id, character_id)
+        )''',
+        '''create table character (
+            id integer primary key,
+            name text
+        )'''
+    ])
+
+    oper = SqliteOperator()
+
+
+    @defer.inlineCallbacks
+    def addCSLewisData(pool):
+        lewis = yield pool.runInteraction(oper.insert, Author(u'C. S. Lewis'))
+
+        book_names = [
+            u'The Lion, the Witch and the Wardrobe',
+            u'Prince Caspian: The Return to Narnia',
+            u'The Voyage of the Dawn Treader',
+        ]
+        books = []
+        for name in book_names:
+            book = yield pool.runInteraction(oper.insert, Book(name, lewis.id))
+            books.append(book)
+
+        characters = {
+            u'Peter': {
+                'obj': None,
+                'books': [0, 1],
+            },
+            u'Susan': {
+                'obj': None,
+                'books': [0, 1],
+            },
+            u'Edmund': {
+                'obj': None,
+                'books': [0, 1, 2],
+            },
+            u'Lucy': {
+                'obj': None,
+                'books': [0, 1, 2],
+            },
+            u'Eustace': {
+                'obj': None,
+                'books': [2],
+            },
+        }
+        for name, data in characters.items():
+            char = yield pool.runInteraction(oper.insert, Character(name))
+            for book_idx in data['books']:
+                yield pool.runInteraction(oper.insert,
+                    BookCharacter(books[book_idx].id, char.id))
+    
+
+    @defer.inlineCallbacks
+    def poolReady(pool):
+        yield addCSLewisData(pool)
+        
+        books = yield pool.runInteraction(oper.query, Query(Book))
+        assert len(books) == 3, books
+        for book in books:
+            print book.title
+
+        # build up the query little by little
+        query = Query(Author, Eq(Author.name, u'C. S. Lewis'))
+        query = query.find(Book, Eq(Author.id, Book.author_id))
+        query = query.find(BookCharacter, Eq(Book.id, BookCharacter.book_id))
+        query = query.find(Character, Eq(BookCharacter.character_id, Character.id))
+        chars = yield pool.runInteraction(oper.query, query)
+
+        names = set([x.name for x in chars])
+        print names
+        assert len(names) == 5, names
+        
+        # find only the characters in the Dawn Treader (using previous query)
+        cs_lewis_dawn_treader = query.find(Character,
+            Eq(Book.title, u'The Voyage of the Dawn Treader'))
+
+        chars = yield pool.runInteraction(oper.query, cs_lewis_dawn_treader)
+        names = set([x.name for x in chars])
+        print names
+        assert len(names) == 3, names
+        
+
+    def gotPool(pool):
+        return patcher.upgrade(pool).addCallback(lambda _: poolReady(pool))
+
+
+    def main(reactor):
+        return makePool('sqlite:foo').addCallback(gotPool)
+        
+        
+    
+    react(main, [])
+
+<!--- end -->
