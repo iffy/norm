@@ -396,7 +396,7 @@ class NextAvailablePoolTest(TestCase):
         pool = NextAvailablePool()
         pool.add('foo')
         pool.add('bar')
-        b = yield pool.get()
+        yield pool.get()
         pool.add('choo')
         pool.add('bozo')
         yield pool.remove('bozo')

@@ -6,17 +6,16 @@ __all__ = ['sqlite']
 from zope.interface import implements
 
 from norm.interface import IAsyncCursor, IOperator
-from norm.orm.base import (classInfo, objectInfo, Converter, reconstitute,
-                           updateObjectFromDatabase, BaseOperator)
+from norm.orm.base import (classInfo, objectInfo, Converter, BaseOperator)
 from norm.orm.props import String, Date, DateTime
-from norm.orm.expr import compiler, Compiler, Query, Table
-from norm.orm.error import NotFound
+from norm.orm.expr import compiler, Compiler
 
 from datetime import datetime
 
 
 try:
-    from pysqlite2 import dbapi2 as sqlite
+    from pysqlite2 import dbapi2
+    sqlite = dbapi2
 except:
     import sqlite3 as sqlite
 

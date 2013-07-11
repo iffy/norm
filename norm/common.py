@@ -4,10 +4,9 @@
 from zope.interface import implements
 from twisted.internet import defer
 
-from collections import deque, defaultdict, namedtuple
+from collections import deque, defaultdict
 
 from norm.interface import IAsyncCursor, IRunner, IPool
-from norm.sqlite import sqlite
 
 
 

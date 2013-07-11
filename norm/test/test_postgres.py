@@ -1,7 +1,7 @@
 # Copyright (c) Matt Haggard.
 # See LICENSE for details.
 
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import TestCase
 from twisted.internet import defer
 from zope.interface.verify import verifyObject
 
@@ -10,8 +10,7 @@ from mock import MagicMock
 from norm.interface import IAsyncCursor
 from norm.common import BlockingCursor
 from norm.postgres import PostgresCursorWrapper
-from norm.uri import parseURI, mkConnStr
-from norm.test.util import postgresConnStr, postgres_url, skip_postgres
+from norm.test.util import postgresConnStr
 
 
 

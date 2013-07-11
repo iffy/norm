@@ -3,11 +3,10 @@
 
 from zope.interface import implements
 
-from norm.interface import IAsyncCursor, IOperator
-from norm.orm.base import (classInfo, objectInfo, Converter, reconstitute,
-                           updateObjectFromDatabase, BaseOperator)
+from norm.interface import IAsyncCursor
+from norm.orm.base import (classInfo, objectInfo, Converter, BaseOperator)
 from norm.orm.props import String, Unicode
-from norm.orm.expr import compiler, Compiler, Query, Table
+from norm.orm.expr import compiler, Compiler
 
 
 def translateSQL(sql):
@@ -62,7 +61,7 @@ def stringToDB(pythonval):
 fromDB = Converter()
 
 @fromDB.when(String)
-def toString(dbval):
+def strToString(dbval):
     if type(dbval) is unicode:
         return dbval.encode('utf-8')
     elif type(dbval) is buffer:
@@ -70,7 +69,7 @@ def toString(dbval):
     return dbval
 
 @fromDB.when(Unicode)
-def toString(dbval):
+def unicodeToString(dbval):
     if type(dbval) is unicode:
         return dbval
     elif type(dbval) is str:
