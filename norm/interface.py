@@ -117,3 +117,12 @@ class IOperator(Interface):
         """
 
 
+    def delete(cursor, obj):
+        """
+        XXX
+        """
+
+
+
+
+

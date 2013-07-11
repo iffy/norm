@@ -9,6 +9,7 @@ from norm.interface import IAsyncCursor, IOperator
 from norm.orm.base import classInfo, objectInfo, Converter, reconstitute
 from norm.orm.props import String, Date, DateTime
 from norm.orm.expr import compiler, State, Compiler, Query, Join, Table
+from norm.orm.error import NotFound
 
 from datetime import datetime
 
@@ -183,6 +184,8 @@ class SqliteOperator(object):
 
 
     def _updateObject(self, data, obj):
+        if data is None:
+            raise NotFound(obj)
         for name, props in classInfo(obj.__class__).columns.items():
             if name not in data.keys():
                 continue
@@ -255,6 +258,28 @@ class SqliteOperator(object):
         args = tuple(set_args + where_args)
 
         return cursor.execute(update, args)
+
+
+    def delete(self, cursor, obj):
+        """
+        XXX
+        """
+        info = classInfo(obj.__class__)
+
+        # XXX I copied this from refresh
+        # XXX REFACTOR
+        where_parts = []
+        where_args = []
+        for prop in info.primaries:
+            where_parts.append('%s=?' % (prop.column_name,))
+            where_args.append(toDB.convert(prop.__class__, prop.toDatabase(obj)))
+
+        delete = 'DELETE FROM %s WHERE %s' % (info.table,
+                 ' AND '.join(where_parts))
+
+        args = tuple(where_args)
+
+        return cursor.execute(delete, args)
 
 
 

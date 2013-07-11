@@ -13,6 +13,7 @@ from norm.porcelain import makePool
 from norm.sqlite import SqliteOperator
 from norm.orm.props import Int, String, Unicode, Date, DateTime, Bool
 from norm.orm.expr import Query, Eq, And
+from norm.orm.error import NotFound
 
 
 
@@ -429,6 +430,24 @@ class CommonTestsMixin(object):
         self.assertEqual(obj2.name, 'new name')
         self.assertEqual(obj2.uni, u'unicycle')
         self.assertEqual(obj2.date, date(2000, 1, 1))
+
+
+    @defer.inlineCallbacks
+    def test_delete(self):
+        """
+        You can delete single objects
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        obj = yield pool.runInteraction(oper.insert, Empty())
+
+        yield pool.runInteraction(oper.delete, obj)
+
+        obj2 = Empty()
+        obj2.id = obj.id
+        self.assertFailure(pool.runInteraction(oper.refresh, obj2), NotFound)
+
 
 
 
