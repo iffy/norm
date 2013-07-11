@@ -296,6 +296,76 @@ class CommonTestsMixin(object):
         oper = yield self.getOperator()
         pool = yield self.getPool()
 
+        # distractions to make sure we're not picking them up
+        p = yield pool.runInteraction(oper.insert, Parent())
+        c = Child(u'nope')
+        c.parent_id = p.id
+        yield pool.runInteraction(oper.insert, c)
+        b = Book()
+        b.name = u'Gone in Sixty Seconds'
+        yield pool.runInteraction(oper.insert, b)
+
+        f = FavoriteBook(c.id, b.id)
+        yield pool.runInteraction(oper.insert, f)
+        
+        # data we're looking for
+        parent = yield pool.runInteraction(oper.insert, Parent())
+        child = Child(u'child')
+        child.parent_id = parent.id
+        yield pool.runInteraction(oper.insert, child)
+
+        book = Book()
+        book.name = u'Around the World in 80 Days'
+        yield pool.runInteraction(oper.insert, book)
+
+        fav = yield pool.runInteraction(oper.insert,
+                                        FavoriteBook(child.id, book.id))
+
+        def q(query):
+            return pool.runInteraction(oper.query, query)
+
+        # simple
+        query = Query(Parent, Eq(Parent.id, parent.id))
+        rows = yield q(query)
+        self.assertEqual(len(rows), 1, "Should return just the one parent")
+
+        # one join
+        query2 = query.find(Child, Eq(Parent.id, Child.parent_id))
+        rows = yield q(query2)
+        self.assertEqual(len(rows), 1, "Should return just the child")
+        row = rows[0]
+        self.assertEqual(row.name, 'child')
+
+        # two joins
+        query3 = query2.find(FavoriteBook, Eq(Child.id, FavoriteBook.child_id))
+        rows = yield q(query3)
+        self.assertEqual(len(rows), 1, "Should return just the one favorite book")
+        row = rows[0]
+        self.assertTrue(isinstance(row, FavoriteBook))
+        self.assertEqual(row.child_id, child.id)
+        self.assertEqual(row.book_id, fav.book_id)
+
+        # three joins
+        query4 = query3.find(Book, Eq(Book.id, FavoriteBook.book_id))
+        rows = yield q(query4)
+        self.assertEqual(len(rows), 1, "Should return the one book")
+        row = rows[0]
+        self.assertTrue(isinstance(row, Book))
+        self.assertEqual(row.name, u'Around the World in 80 Days')
+
+        # Parent straight to Book
+        query5 = query.find(Book,
+                    And(
+                        Eq(Book.id, FavoriteBook.book_id),
+                        Eq(FavoriteBook.child_id, Child.id),
+                        Eq(Child.parent_id, Parent.id),
+                        Eq(Parent.id, parent.id),
+                    ))
+        rows = yield q(query5)
+        self.assertEqual(len(rows), 1, "Just the one book still")
+        row = rows[0]
+        self.assertEqual(row.name, u'Around the World in 80 Days')
+
 
 
 

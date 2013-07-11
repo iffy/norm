@@ -50,6 +50,13 @@ class Query(object):
         return self._classes
 
 
+    def find(self, select, constraints):
+        """
+        XXX
+        """
+        return Query(select, And(self.constraints, constraints))
+
+
 def aliases(pool='abcdefghijklmnopqrstuvwxyz'):
     for i in xrange(1, 255):
         for item in product(pool, repeat=i):
