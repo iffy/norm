@@ -81,7 +81,7 @@ postgres_compiler = Compiler([compiler])
 
 class PostgresOperator(BaseOperator):
     """
-    XXX
+    I provide PostgreSQL-specific methods for ORM-based database interactions.
     """
 
     compiler = postgres_compiler
@@ -91,7 +91,8 @@ class PostgresOperator(BaseOperator):
 
     def insert(self, cursor, obj):
         """
-        Insert a row into the database.
+        Insert a row into the database.  This function expects to be run in an
+        asynchronous interaction.
         """
         info = objectInfo(obj)
         cls_info = classInfo(obj.__class__)

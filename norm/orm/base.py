@@ -336,7 +336,11 @@ class Converter(object):
         return value
 
 
+
 class BaseOperator(object):
+    """
+    I provide asynchronous CRUD database access with objects.
+    """
 
     implements(IOperator)
 
@@ -350,6 +354,15 @@ class BaseOperator(object):
 
 
     def _makeObjects(self, rows, query):
+        """
+        Reconstitute objects based on a query and the rows returned from the 
+        database.
+
+        @param rows: Rows returned from the database.
+        @oaram query: L{Query} used to find these rows.
+
+        @return: A list of reconstituted rows.
+        """
         ret = []
         props = query.properties()
         for row in rows:
@@ -364,6 +377,11 @@ class BaseOperator(object):
 
 
     def query(self, cursor, query):
+        """
+        Query for objects.
+
+        @param query: A L{Query} instance.
+        """
         sql, args = self.compiler.compile(query)
         d = cursor.execute(sql, tuple(args))
         d.addCallback(lambda _: cursor.fetchall())
@@ -373,7 +391,9 @@ class BaseOperator(object):
 
     def refresh(self, cursor, obj):
         """
-        XXX
+        Update an objects attributes from the values in the database.
+
+        @param obj: Object to update
         """
         info = classInfo(obj.__class__)
         
@@ -396,7 +416,9 @@ class BaseOperator(object):
 
     def update(self, cursor, obj):
         """
-        XXX
+        Update the database from changed attributes on an object.
+
+        @param obj: Object to get attributes for updating from.
         """
         obj_info = objectInfo(obj)
         info = classInfo(obj.__class__)
@@ -428,7 +450,9 @@ class BaseOperator(object):
 
     def delete(self, cursor, obj):
         """
-        XXX
+        Delete an object from the database.
+
+        @param obj: Object to delete.
         """
         info = classInfo(obj.__class__)
 

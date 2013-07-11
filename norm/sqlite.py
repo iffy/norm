@@ -52,6 +52,7 @@ class SqliteCursorWrapper(object):
         return self.cursor.lastRowId()
 
 
+
 toDB = Converter()
 
 @toDB.when(str)
@@ -106,7 +107,7 @@ class SqliteOperator(BaseOperator):
     def insert(self, cursor, obj):
         """
         Insert a row into the database.  This function expects to be run in
-        an interaction.
+        an asynchronous interaction.
         """
         info = objectInfo(obj)
         cls_info = classInfo(obj.__class__)
@@ -141,28 +142,6 @@ class SqliteOperator(BaseOperator):
         d.addCallback(lambda _: cursor.fetchone())
         d.addCallback(self._updateObject, obj)
         return d
-
-
-    def delete(self, cursor, obj):
-        """
-        XXX
-        """
-        info = classInfo(obj.__class__)
-
-        # XXX I copied this from refresh
-        # XXX REFACTOR
-        where_parts = []
-        where_args = []
-        for prop in info.primaries:
-            where_parts.append('%s=?' % (prop.column_name,))
-            where_args.append(toDB.convert(prop.__class__, prop.toDatabase(obj)))
-
-        delete = 'DELETE FROM %s WHERE %s' % (info.table,
-                 ' AND '.join(where_parts))
-
-        args = tuple(where_args)
-
-        return cursor.execute(delete, args)
 
 
 

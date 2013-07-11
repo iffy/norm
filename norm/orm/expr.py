@@ -15,11 +15,16 @@ class CompileError(Exception):
 
 class Query(object):
     """
-    XXX
+    I am a query for a set of objects.  Pass me to L{IOperator.query}.
     """
 
 
     def __init__(self, select, constraints=None):
+        """
+        @param select: Class(es) to return in the result.  This may either be
+            a single class or a list/tuple of classes.
+        @param constraints: A L{Comparison} or other compileable expression.
+        """
         if type(select) not in (list, tuple):
             select = (select,)
         self.select = select
@@ -47,21 +52,25 @@ class Query(object):
 
 
     def classes(self):
+        """
+        Return a list of classes involved in the query.
+        """
         return self._classes
 
 
     def find(self, select, constraints):
         """
-        XXX
+        Search for another kind of object with additional constraints.
         """
         return Query(select, And(self.constraints, constraints))
 
 
 
-def aliases(pool='abcdefghijklmnopqrstuvwxyz'):
+def _aliases(pool='abcdefghijklmnopqrstuvwxyz'):
     for i in xrange(1, 255):
         for item in product(pool, repeat=i):
             yield ''.join(item)
+
 
 
 class State(object):
@@ -73,7 +82,7 @@ class State(object):
 
 
     def __init__(self):
-        pool = aliases()
+        pool = _aliases()
         self._aliases = defaultdict(lambda:pool.next())
         self.classes = []
 
@@ -172,9 +181,16 @@ def compile_Query(query, state):
 
 
 
+@compiler.when(Property)
+def compile_Property(x, state):
+    alias = state.tableAlias(x.cls)
+    return '%s.%s' % (alias, x.column_name), ()
+
+
+
 class Table(object):
     """
-    XXX
+    I wrap an ORM class and compile to an aliased table.
     """
 
     def __init__(self, cls):
@@ -185,12 +201,6 @@ class Table(object):
 def compile_Table(table, state):
     info = classInfo(table.cls)
     return '%s AS %s' % (info.table, state.tableAlias(table.cls)), ()
-
-
-@compiler.when(Property)
-def compile_Property(x, state):
-    alias = state.tableAlias(x.cls)
-    return '%s.%s' % (alias, x.column_name), ()
 
 
 @compiler.when(str, unicode, int, bool, date, datetime)
