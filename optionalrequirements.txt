@@ -1,3 +1,4 @@
 Twisted
 psycopg2
 txpostgres
+pysqlite
