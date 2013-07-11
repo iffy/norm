@@ -8,7 +8,7 @@ from zope.interface import implements
 from norm.interface import IAsyncCursor, IOperator
 from norm.orm.base import classInfo, objectInfo, Converter, reconstitute
 from norm.orm.props import String, Date, DateTime
-from norm.orm.expr import compiler, State
+from norm.orm.expr import compiler, State, Compiler, Query, Join
 
 from datetime import datetime
 
@@ -84,6 +84,45 @@ def toDate(dbval):
 
 
 
+sqlite_compiler = Compiler([compiler])
+
+@sqlite_compiler.when(Query)
+def compile_Query(query, state):
+    # select
+    props = query.properties()
+    columns = []
+    select_args = []
+    for prop in props:
+        s, q = state.compile(prop)
+        columns.append(s)
+        select_args.extend(q)
+    select_clause = ['SELECT %s' % (','.join(columns),)]
+
+    # where
+    where_clause = []
+    where_args = []
+    constraints = query.constraints
+    if constraints:
+        s, a = compiler.compile(constraints, state)
+        where_clause = ['WHERE %s' % (s,)]
+        where_args.extend(a)
+
+    # table
+    classes = [x for x in state.classes]
+    from_args = []
+    tables = []
+    for cls in classes:
+        info = classInfo(cls)
+        state.tableAlias(cls)
+        tables.append('%s AS %s' % (info.table, state.tableAlias(cls)))
+    from_clause = ['FROM %s' % (','.join(tables))]
+    
+
+    sql = ' '.join(select_clause + from_clause + where_clause)
+    args = tuple(select_args + from_args + where_args)
+    return sql, args
+
+
 class SqliteOperator(object):
     """
     I provide SQLite-specific methods for ORM-based database interactions.
@@ -142,33 +181,6 @@ class SqliteOperator(object):
         return d
 
 
-    def _makeSql(self, query):
-        clauses = []
-        args = []
-
-        state = State()
-        cls = query.classes()[0]
-        alias = state.tableAlias(cls)
-        cls_info = classInfo(cls)
-
-        # select
-        props = query.properties()
-        columns = [alias+'.'+x.column_name for x in props]
-        clauses.append('SELECT %s' % (','.join(columns),))
-
-        # table
-        clauses.append('FROM %s AS %s' % (cls_info.table, alias))
-
-        # where
-        constraints = query.constraints
-        if constraints:
-            sql, args = compiler.compile(constraints, state)
-            clauses.append('WHERE %s' % (sql,))
-
-        sql = ' '.join(clauses)
-        return sql, args
-
-
     def _makeObjects(self, rows, query):
         ret = []
         props = query.properties()
@@ -180,9 +192,11 @@ class SqliteOperator(object):
 
 
     def query(self, cursor, query):
-        select, args = self._makeSql(query)
+        sql, args = sqlite_compiler.compile(query)
         
-        d = cursor.execute(select, tuple(args))
+        
+        print sql, args
+        d = cursor.execute(sql, tuple(args))
         d.addCallback(self._makeObjects, query)
         return d
 

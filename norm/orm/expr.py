@@ -67,6 +67,7 @@ class State(object):
     def __init__(self):
         pool = aliases()
         self._aliases = defaultdict(lambda:pool.next())
+        self.classes = []
 
 
     def compile(self, thing):
@@ -78,7 +79,10 @@ class State(object):
         Return a name that can be used (repeatedly) as an alias for a class'
         table.
         """
-        return self._aliases[cls]
+        alias = self._aliases[cls]
+        if cls not in self.classes:
+            self.classes.append(cls)
+        return alias
 
 
 

@@ -12,7 +12,7 @@ from norm.patch import Patcher
 from norm.porcelain import makePool
 from norm.sqlite import SqliteOperator
 from norm.orm.props import Int, String, Unicode, Date, DateTime, Bool
-from norm.orm.expr import Query, Eq
+from norm.orm.expr import Query, Eq, And
 
 
 
@@ -33,7 +33,42 @@ class Defaults(object):
     uni = Unicode()
     date = Date()
     dtime = DateTime()
-    mybool = Bool()    
+    mybool = Bool()
+
+
+class Parent(object):
+    __sql_table__ = 'parent'
+    id = Int(primary=True)
+    name = Unicode()
+
+
+class Child(object):
+    __sql_table__ = 'child'
+    id = Int(primary=True)
+    name = Unicode()
+    parent_id = Int()
+
+    def __init__(self, name=None):
+        self.name = name
+
+
+class FavoriteBook(object):
+    __sql_table__ = 'favorite_book'
+    child_id = Int(primary=True)
+    book_id = Int(primary=True)
+
+    def __init__(self, child_id=None, book_id=None):
+        self.child_id = child_id
+        self.book_id = book_id
+
+
+class Book(object):
+    __sql_table__ = 'book'
+    id = Int(primary=True)
+    name = Unicode()
+
+    def __init__(self, name=None):
+        self.name = name
 
 
 
@@ -192,6 +227,75 @@ class CommonTestsMixin(object):
         self.assertEqual(items[0].name, '1')
 
 
+    @defer.inlineCallbacks
+    def test_query_autoJoin(self):
+        """
+        You can query across two tables with the default SQL join
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        p1 = Parent()
+        p1.id = 1
+        p2 = Parent()
+        p2.id = 2
+        c1 = Child(u'child1')
+        c1.parent_id = 1
+        c2 = Child(u'child2')
+        c2.parent_id = 2
+
+        for obj in [p1, p2, c1, c2]:
+            yield pool.runInteraction(oper.insert, obj)
+        
+        items = yield pool.runInteraction(oper.query,
+                Query(Child, And(
+                    Eq(Child.parent_id, Parent.id),
+                    Eq(Parent.id,1))))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].name, 'child1', "Should return the one child")
+
+
+    @defer.inlineCallbacks
+    def test_query_multiClass(self):
+        """
+        You can get two objects at once
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        p1 = Parent()
+        p1.id = 1
+        p2 = Parent()
+        p2.id = 2
+        c1 = Child(u'child1')
+        c1.parent_id = 1
+        c2 = Child(u'child2')
+        c2.parent_id = 2
+
+        for obj in [p1, p2, c1, c2]:
+            yield pool.runInteraction(oper.insert, obj)
+
+        items = yield pool.runInteraction(oper.query,
+                Query((Child, Parent), And(
+                    Eq(Child.parent_id, Parent.id),
+                    Eq(Parent.id, 2))))
+
+        self.assertEqual(len(items), 1)
+        child, parent = items[0]
+        self.assertTrue(isinstance(child, Child))
+        self.assertEqual(child.name, 'child2')
+        self.assertTrue(isinstance(parent, Parent))
+        self.assertEqual(parent.id, 2)
+
+
+    @defer.inlineCallbacks
+    def test_query_build(self):
+        """
+        You can build on to a query
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
 
 
 
@@ -214,6 +318,24 @@ class SqliteOperatorTest(CommonTestsMixin, TestCase):
             date date default '2001-01-01',
             dtime timestamp default '2001-01-01 12:22:32',
             mybool tinyint default 1
+        )''',
+        '''CREATE TABLE parent (
+            id INTEGER PRIMARY KEY,
+            name TEXT
+        )''',
+        '''CREATE TABLE child (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            parent_id INTEGER
+        )''',
+        '''CREATE TABLE favorite_book (
+            child_id INTEGER,
+            book_id INTEGER,
+            PRIMARY KEY (child_id, book_id)
+        )''',
+        '''CREATE TABLE book (
+            id INTEGER PRIMARY KEY,
+            name text
         )''',
     ])
 

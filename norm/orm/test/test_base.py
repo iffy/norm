@@ -297,6 +297,23 @@ class reconstituteTest(TestCase):
         self.assertEqual(foo.a, 'heydb')
 
 
+    def test_multiple(self):
+        """
+        If multiple classes are represented in the properties, return multiple classes
+        """
+        class Foo(object):
+            a = Property()
+        class Bar(object):
+            b = Property()
+
+        foo, bar = reconstitute([
+            (Foo.a, 'hey'),
+            (Bar.b, 'ho'),
+        ])
+        self.assertEqual(foo.a, 'hey')
+        self.assertEqual(bar.b, 'ho')
+
+
 
 class ConverterTest(TestCase):
 

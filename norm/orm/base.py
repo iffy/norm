@@ -271,10 +271,12 @@ def reconstitute(data):
     for cls in classes:
         obj = cls.__new__(cls)
         ret.append(obj)
-        for prop, value in class_data[prop.cls]:
+        for prop, value in class_data[cls]:
             prop.fromDatabase(obj, value)
 
-    return ret[0]
+    if len(ret) == 1:
+        return ret[0]
+    return ret
 
 
 
