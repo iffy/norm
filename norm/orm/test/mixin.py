@@ -104,7 +104,7 @@ class FunctionalIOperatorTestsMixin(object):
         empty = yield pool.runInteraction(oper.insert, Empty())
         self.assertTrue(isinstance(empty, Empty), "Should return an instance"
                         " of Empty, not %r" % (empty,))
-        self.assertEqual(empty.id, 1, "Should populate the primary key id")
+        self.assertNotEqual(empty.id, None, "Should populate the primary key id")
         self.assertEqual(empty.name, None)
         self.assertEqual(empty.uni, None)
         self.assertEqual(empty.date, None)
@@ -127,7 +127,7 @@ class FunctionalIOperatorTestsMixin(object):
         empty.mybool = True
 
         yield pool.runInteraction(oper.insert, empty)
-        self.assertEqual(empty.id, 1)
+        self.assertNotEqual(empty.id, None)
         self.assertEqual(empty.name, 'foo')
         self.assertEqual(empty.uni, u'something')
         self.assertEqual(empty.date, date(2000, 1, 1))
@@ -146,7 +146,7 @@ class FunctionalIOperatorTestsMixin(object):
         defs = Defaults()
 
         yield pool.runInteraction(oper.insert, defs)
-        self.assertEqual(defs.id, 1)
+        self.assertNotEqual(defs.id, None)
         self.assertEqual(defs.name, 'hey')
         self.assertEqual(defs.uni, u'ho')
         self.assertEqual(defs.date, date(2001, 1, 1))
@@ -225,7 +225,7 @@ class FunctionalIOperatorTestsMixin(object):
         yield pool.runInteraction(oper.insert, e2)
 
         items = yield pool.runInteraction(oper.query,
-                                          Query(Empty, Eq(Empty.id, 1)))
+                                          Query(Empty, Eq(Empty.id, e1.id)))
         self.assertEqual(len(items), 1, "Should return one item")
         self.assertEqual(items[0].name, '1')
 

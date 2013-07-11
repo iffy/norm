@@ -5,6 +5,11 @@ from collections import defaultdict
 import inspect
 import weakref
 
+from zope.interface import implements
+
+from norm.orm.error import NotFound
+from norm.interface import IOperator
+
 
 
 class Property(object):
@@ -116,7 +121,8 @@ class Property(object):
 
 
     def _markChanged(self, obj):
-        self.changes(obj).append(self)
+        if self not in self.changes(obj):
+            self.changes(obj).append(self)
 
 
     def changes(self, obj):
@@ -279,6 +285,28 @@ def reconstitute(data):
     return ret
 
 
+def updateObjectFromDatabase(data, obj, converter):
+    """
+    Update an existing object's attributes from a database response row.
+
+    @param data: A tuple-dict thing as returned by IAsyncCursor.fetchOne
+    @param obj: An ORM'd object
+    @param converter: A L{Converter} instance that knows how to convert from
+        database-land to python-land.
+
+    @return: The same C{obj} with updated attributes.
+    """
+    if data is None:
+        raise NotFound(obj)
+    for name, props in classInfo(obj.__class__).columns.items():
+        if name not in data.keys():
+            continue
+        for prop in props:
+            value = converter.convert(prop.__class__, data[name])
+            prop.fromDatabase(obj, value)
+    return obj
+
+
 
 class Converter(object):
     """
@@ -308,8 +336,116 @@ class Converter(object):
         return value
 
 
+class BaseOperator(object):
+
+    implements(IOperator)
+
+    compiler = None
+    fromDB = None
+    toDB = None
 
 
+    def insert(self, cursor, obj):
+        raise NotImplementedError('Implement insert')
+
+
+    def _makeObjects(self, rows, query):
+        ret = []
+        props = query.properties()
+        for row in rows:
+            data = zip(props, row)
+            data = [(x[0], self.fromDB.convert(x[0].__class__, x[1])) for x in data]
+            ret.append(reconstitute(data))
+        return ret
+
+
+    def _updateObject(self, data, obj):
+        return updateObjectFromDatabase(data, obj, self.fromDB)
+
+
+    def query(self, cursor, query):
+        sql, args = self.compiler.compile(query)
+        d = cursor.execute(sql, tuple(args))
+        d.addCallback(lambda _: cursor.fetchall())
+        d.addCallback(self._makeObjects, query)
+        return d
+
+
+    def refresh(self, cursor, obj):
+        """
+        XXX
+        """
+        info = classInfo(obj.__class__)
+        
+        args = []
+        
+        where_parts = []
+        for prop in info.primaries:
+            where_parts.append('%s=?' % (prop.column_name,))
+            args.append(self.toDB.convert(prop.__class__, prop.toDatabase(obj)))
+        
+        columns = info.columns.keys()
+        select = 'SELECT %s FROM %s WHERE %s' % (','.join(columns),
+                  info.table, ' AND '.join(where_parts))
+
+        d = cursor.execute(select, tuple(args))
+        d.addCallback(lambda _: cursor.fetchone())
+        d.addCallback(self._updateObject, obj)
+        return d
+
+
+    def update(self, cursor, obj):
+        """
+        XXX
+        """
+        obj_info = objectInfo(obj)
+        info = classInfo(obj.__class__)
+        changed = obj_info.changed()
+
+        # XXX I copied and modified this from insert
+        set_parts = []
+        set_args = []
+        for prop in changed:
+            set_parts.append('%s=?' % (prop.column_name,))
+            value = self.toDB.convert(prop.__class__, prop.toDatabase(obj))
+            set_args.append(value)
+
+        # XXX I copied this from refresh
+        # XXX REFACTOR
+        where_parts = []
+        where_args = []
+        for prop in info.primaries:
+            where_parts.append('%s=?' % (prop.column_name,))
+            where_args.append(self.toDB.convert(prop.__class__, prop.toDatabase(obj)))
+
+        update = 'UPDATE %s SET %s WHERE %s' % (info.table,
+                 ','.join(set_parts),
+                 ' AND '.join(where_parts))
+        args = tuple(set_args + where_args)
+
+        return cursor.execute(update, args)
+
+
+    def delete(self, cursor, obj):
+        """
+        XXX
+        """
+        info = classInfo(obj.__class__)
+
+        # XXX I copied this from refresh
+        # XXX REFACTOR
+        where_parts = []
+        where_args = []
+        for prop in info.primaries:
+            where_parts.append('%s=?' % (prop.column_name,))
+            where_args.append(self.toDB.convert(prop.__class__, prop.toDatabase(obj)))
+
+        delete = 'DELETE FROM %s WHERE %s' % (info.table,
+                 ' AND '.join(where_parts))
+
+        args = tuple(where_args)
+
+        return cursor.execute(delete, args)
 
 
 

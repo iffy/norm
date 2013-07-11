@@ -57,6 +57,7 @@ class Query(object):
         return Query(select, And(self.constraints, constraints))
 
 
+
 def aliases(pool='abcdefghijklmnopqrstuvwxyz'):
     for i in xrange(1, 255):
         for item in product(pool, repeat=i):
@@ -130,6 +131,45 @@ class Compiler(object):
 
 
 compiler = Compiler()
+
+
+@compiler.when(Query)
+def compile_Query(query, state):
+    # select
+    props = query.properties()
+    columns = []
+    select_args = []
+    for prop in props:
+        s, q = state.compile(prop)
+        columns.append(s)
+        select_args.extend(q)
+    select_clause = ['SELECT %s' % (','.join(columns),)]
+
+    # where
+    where_clause = []
+    where_args = []
+    constraints = query.constraints
+    if constraints:
+        s, a = state.compile(constraints)
+        where_clause = ['WHERE %s' % (s,)]
+        where_args.extend(a)
+
+    # table
+    classes = [x for x in state.classes]
+    from_args = []
+    tables = []
+    for cls in classes:
+        s, a = state.compile(Table(cls))
+        tables.append(s)
+        from_args.extend(a)
+
+    from_clause = ['FROM %s' % (','.join(tables))]
+    
+
+    sql = ' '.join(select_clause + from_clause + where_clause)
+    args = tuple(select_args + from_args + where_args)
+    return sql, args
+
 
 
 class Table(object):
