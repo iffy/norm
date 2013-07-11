@@ -4,17 +4,8 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer
 
-import os
-
 from norm.porcelain import makePool, insert
-
-
-
-postgres_url = os.environ.get('NORM_POSTGRESQL_URI', None)
-skip_postgres = ('You must define NORM_POSTGRESQL_URI in order to run this '
-                 'postgres test')
-if postgres_url:
-    skip_postgres = ''
+from norm.test.util import postgres_url, skip_postgres
 
 
 

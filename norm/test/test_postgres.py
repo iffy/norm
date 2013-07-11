@@ -11,24 +11,7 @@ from norm.interface import IAsyncCursor
 from norm.common import BlockingCursor
 from norm.postgres import PostgresCursorWrapper
 from norm.uri import parseURI, mkConnStr
-
-import os
-psycopg2 = None
-conn_args = None
-
-try:
-    import psycopg2
-except ImportError:
-    pass
-
-
-def getConnStr():
-    url = os.environ.get('NORM_POSTGRESQL_URI', None)
-    if not url:
-        raise SkipTest('You must define NORM_POSTGRESQL_URI in order to do '
-                       'testing against a postgres database.  It should be '
-                       'in the format user:password@host:port/database')
-    return mkConnStr(parseURI(url))
+from norm.test.util import postgresConnStr, postgres_url, skip_postgres
 
 
 
@@ -69,7 +52,8 @@ class PostgresCursorWrapperFunctionalTest(TestCase):
 
 
     def test_works(self):
-        connstr = getConnStr()
+        connstr = postgresConnStr()
+        import psycopg2
         db = psycopg2.connect(connstr)
         c = db.cursor()
 
