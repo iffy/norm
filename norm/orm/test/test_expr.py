@@ -69,7 +69,7 @@ class CompilerTest(TestCase):
             pass
 
         @compiler.when(Foo)
-        def foo(x, state):
+        def func(x, state):
             return (x, state, 'hey')
 
 
