@@ -169,8 +169,11 @@ migrations.
 
 ## ORM ##
 
-Included is an intentionally feature-deficient, lightweight ORM.  It makes doing
-CRUD operations nicer.  Also, the network interaction is seperate from the
+Included is an deliberately feature-deficient, lightweight ORM.  It makes doing CRUD operations nicer, and that's about it.
+
+The ORM component is largely based on Storm but intentionally leaves out many features that Storm has.
+
+Also, the network interaction is seperate from the
 ORMness, so that you could reuse the ORM-ness in a synchronous environment.
 
 Here's an example:
@@ -180,10 +183,9 @@ Here's an example:
 
     from twisted.internet.task import react
     from twisted.internet import defer
-    from norm import makePool
+    from norm import makePool, ormHandle
     from norm.orm.props import Int, Unicode
     from norm.orm.expr import Query, Eq
-    from norm.sqlite import SqliteOperator
     from norm.patch import Patcher
 
 
@@ -248,12 +250,10 @@ Here's an example:
         )'''
     ])
 
-    oper = SqliteOperator()
-
 
     @defer.inlineCallbacks
-    def addCSLewisData(pool):
-        lewis = yield pool.runInteraction(oper.insert, Author(u'C. S. Lewis'))
+    def addCSLewisData(handle):
+        lewis = yield handle.insert(Author(u'C. S. Lewis'))
 
         book_names = [
             u'The Lion, the Witch and the Wardrobe',
@@ -262,7 +262,7 @@ Here's an example:
         ]
         books = []
         for name in book_names:
-            book = yield pool.runInteraction(oper.insert, Book(name, lewis.id))
+            book = yield handle.insert(Book(name, lewis.id))
             books.append(book)
 
         characters = {
@@ -288,17 +288,16 @@ Here's an example:
             },
         }
         for name, data in characters.items():
-            char = yield pool.runInteraction(oper.insert, Character(name))
+            char = yield handle.insert(Character(name))
             for book_idx in data['books']:
-                yield pool.runInteraction(oper.insert,
-                    BookCharacter(books[book_idx].id, char.id))
+                yield handle.insert(BookCharacter(books[book_idx].id, char.id))
     
 
     @defer.inlineCallbacks
-    def poolReady(pool):
-        yield addCSLewisData(pool)
+    def handleReady(handle):
+        yield addCSLewisData(handle)
         
-        books = yield pool.runInteraction(oper.query, Query(Book))
+        books = yield handle.find(Book)
         assert len(books) == 3, books
         for book in books:
             print book.title
@@ -308,7 +307,7 @@ Here's an example:
         query = query.find(Book, Eq(Author.id, Book.author_id))
         query = query.find(BookCharacter, Eq(Book.id, BookCharacter.book_id))
         query = query.find(Character, Eq(BookCharacter.character_id, Character.id))
-        chars = yield pool.runInteraction(oper.query, query)
+        chars = yield handle.query(query)
 
         names = set([x.name for x in chars])
         print names
@@ -318,14 +317,17 @@ Here's an example:
         cs_lewis_dawn_treader = query.find(Character,
             Eq(Book.title, u'The Voyage of the Dawn Treader'))
 
-        chars = yield pool.runInteraction(oper.query, cs_lewis_dawn_treader)
+        chars = yield handle.query(cs_lewis_dawn_treader)
         names = set([x.name for x in chars])
         print names
         assert len(names) == 3, names
         
 
     def gotPool(pool):
-        return patcher.upgrade(pool).addCallback(lambda _: poolReady(pool))
+        d = patcher.upgrade(pool)
+        d.addCallback(lambda _: ormHandle(pool))
+        d.addCallback(handleReady)
+        return d
 
 
     def main(reactor):

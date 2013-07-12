@@ -4,10 +4,9 @@
 from zope.interface import implements
 from twisted.internet import defer
 
-from collections import deque, defaultdict, namedtuple
+from collections import deque, defaultdict
 
 from norm.interface import IAsyncCursor, IRunner, IPool
-from norm.sqlite import sqlite
 
 
 
@@ -106,6 +105,8 @@ class ConnectionPool(object):
 
 
     implements(IRunner)
+
+    db_scheme = None
 
 
     def __init__(self, pool=None):

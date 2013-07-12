@@ -84,7 +84,7 @@ class Patcher(object):
     def _appliedPatches(self, runner):
         d = runner.runQuery('select name from ' + self.patch_table_name)
         d.addErrback(lambda x: self._createPatchTable(runner))
-        d.addCallback(lambda x: [x[0] for x in x])
+        d.addCallback(lambda a: [x[0] for x in a])
         return d
 
 

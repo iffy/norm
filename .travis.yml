@@ -12,10 +12,11 @@ env:
 
 install:
     - "pip install -r $REQUIREMENTS --use-mirrors"
+    - "pip install pyflakes"
 
 before_script:
     - psql -c 'create database foo;' -U postgres
 
 
 
-script: trial norm
+script: trial norm && pyflakes norm

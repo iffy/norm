@@ -244,6 +244,7 @@ class FunctionalIOperatorTestsMixin(object):
 
         items = yield pool.runInteraction(oper.query,
                 Query(Empty, Eq(Empty.name, '1')))
+        self.assertEqual(len(items), 1)
 
 
     @defer.inlineCallbacks
