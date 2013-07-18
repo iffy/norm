@@ -7,7 +7,7 @@ from datetime import date, datetime
 
 from norm.orm.base import Property
 from norm.orm.expr import (Compiler, State, CompileError, Comparison,
-                           Eq, Neq, And, Or, Join, Table,
+                           Eq, Neq, And, Or, Join, Table, Lt, Lte, Gt, Gte,
                            compiler as base_compiler)
 
 
@@ -239,6 +239,23 @@ class compilerTest(TestCase):
                          ('NULL IS NOT ?', ('hey',)))
         self.assertEqual(base_compiler.compile(Neq(None, None)),
                          ('NULL IS NOT NULL', ()))
+
+
+    def test_Gt(self):
+        self.assertEqual(base_compiler.compile(Gt(1, 2)),
+                         ('? > ?', (1, 2)))
+
+    def test_Gte(self):
+        self.assertEqual(base_compiler.compile(Gte(1, 2)),
+                         ('? >= ?', (1, 2)))
+
+    def test_Lt(self):
+        self.assertEqual(base_compiler.compile(Lt(1, 2)),
+                         ('? < ?', (1, 2)))
+
+    def test_Lte(self):
+        self.assertEqual(base_compiler.compile(Lte(1, 2)),
+                         ('? <= ?', (1, 2)))
 
 
     def test_And(self):
