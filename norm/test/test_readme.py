@@ -18,14 +18,15 @@ class ExampleTest(TestCase):
 
     readme = FilePath(__file__).parent().parent().parent().child('README.md')
     r_snippet = re.compile(r'''
-        <!---\s*test:(.*?)\s*-->   # start 
+        <!---\s*test\s*-->   # start 
+        \s*```python\s*
         (.*?)           # content
-        <!---\s*end\s*--> # end
+        \s*```
         ''', re.I | re.S | re.X)
 
 
-    def t(self, filepath, name=''):
-        name = name or filepath.path
+    def t(self, filepath, name):
+        print 'testing', name
         env = os.environ.copy()
         env['PYTHONPATH'] =  self.readme.parent().path + ':' + env.get('PYTHONPATH', '')
         d = getProcessOutputAndValue(sys.executable, [filepath.path],
@@ -54,10 +55,10 @@ class ExampleTest(TestCase):
         groups = self.r_snippet.findall(guts)
 
         dlist = []
-        for i, (name, content) in enumerate(groups):
+        for i, content in enumerate(groups, 0):
             tmpfile = tmpdir.child('test%d.py' % (i,))
             tmpfile.setContent(textwrap.dedent(content))
-            dlist.append(self.t(tmpfile, name))
+            dlist.append(self.t(tmpfile, 'code block %s' % i))
         return defer.gatherResults(dlist)
         
     
