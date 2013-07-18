@@ -11,8 +11,7 @@ An asynchronous, cross-database library (for use with Twisted).  It includes:
 
 ## Basic usage ##
 
-Create a database, add a record (and get the newly created primary key) then
-print out all the rows in the table:
+Create an in-memory SQLite database, add a record (and get the newly created primary key) then print out all the rows in the table:
 
 <!--- test -->
 
@@ -54,7 +53,7 @@ react(main, [])
 
 ## Schema migrations / patches ##
 
-Keep track of schema changes:
+Keep track of schema changes and apply them to databases:
 
 
 <!--- test -->
@@ -92,8 +91,7 @@ react(main, [])
 ```
 
 
-You will typically have a single `Patcher` instance per database type in a file
-to which you add patches as needed, like this:
+One way to handle schema is to have a single `Patcher` instance per database type in a file to which you add patches as needed, like this:
 
 <!--- test -->
 
@@ -125,8 +123,9 @@ patcher.add('+customer.lastlogin',
 ```
 
 
-Patches are lists of SQL by default, but you may also provide a python function
-to do more complicated patching techniques.
+Patches (the second argument to ``Patcher.add``) are lists of SQL by default, but you may also provide a python function to do more complicated patching techniques.
+
+
 
 ### Partial migration ###
 
@@ -170,14 +169,9 @@ task.react(main, [])
 
 ## ORM ##
 
-Included is a deliberately feature-deficient, lightweight ORM.  It makes doing CRUD operations nicer, and that's about it.
+Included is a deliberately feature-deficient, lightweight ORM.  It makes doing CRUD operations nicer, and that's about it.  The ORM component is largely based on [Storm](https://storm.canonical.com/) but intentionally leaves out many features that Storm has.  Also, the network interaction is separate from the ORMness, so that you could reuse the ORMness in a synchronous environment.
 
-The ORM component is largely based on [Storm](https://storm.canonical.com/) but intentionally leaves out many features that Storm has.
-
-Also, the network interaction is seperate from the
-ORMness, so that you could reuse the ORMness in a synchronous environment.
-
-Here's an example:
+Here's an example using the ORM portion of norm:
 
 
 <!--- test -->
