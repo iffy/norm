@@ -112,6 +112,16 @@ class ormHandleMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_pool(self):
+        """
+        The ormHandle should have a pool attribute that you can use directly.
+        """
+        pool = yield self.getPool()
+        handle = yield ormHandle(pool)
+        self.assertEqual(handle.pool, pool)
+
+
+    @defer.inlineCallbacks
     def test_functional(self):
         pool = yield self.getPool()
 
