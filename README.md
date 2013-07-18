@@ -2,7 +2,11 @@
 
 # NORM #
 
-An asynchronous, cross-database library (for use with Twisted, for instance).
+An asynchronous, cross-database library (for use with Twisted).  It includes:
+
+- [Basic database interaction](#basic-usage)
+- Stuff to help with [schema management and migration](#schema-migrations--patches)
+- A no frills [ORM](#orm)
 
 
 ## Basic usage ##
