@@ -8,6 +8,15 @@ An asynchronous, cross-database library (for use with Twisted).  It includes:
 - Stuff to help with [schema management and migration](#schema-migrations--patches)
 - A no frills [ORM](#orm)
 
+## Blocking / Threads ##
+
+Though norm consistently presents an asynchronous API (i.e. returns ``Deferreds``), not all operations are actually asynchronous and may block the main thread.  This may change, but as it stands, if you connect to a database using `norm.makePool`:
+
+- All operations on SQLite databases will block the main thread
+- If `txpostgres` is installed, operations on PostgreSQL databases will be truly asynchronous.  If `txpostgres` is not installed, operations on PostgreSQL databases will block the main thread.
+
+In the future, support for using `twisted.enterprise.adbapi` may be added so that query work can be pawned off to threads instead of blocking the main thread.
+
 
 ## Basic usage ##
 
