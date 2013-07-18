@@ -70,6 +70,25 @@ def _makeTxPostgres(parsed, connections=1):
 
 
 def makePool(uri, connections=1):
+    """
+    Make a pool of connections for interacting with a database.
+
+    :param uri: A database URI.  For example, an in-memory SQLite database URI
+        looks like this::
+
+            sqlite:
+
+        And a full PostgreSQL URI looks like this::
+
+            postgres://user:password@host.com:1234/databasename
+
+    :param connections: Number of connections in the pool.  This is ignored for
+        SQLite databases.
+
+    :rtype: An Deferred IRunner instance which has methods like ``runQuery``,
+        ``runOperation`` and ``runInteraction``.  If any of the connections
+        fail, this will errback.
+    """
     parsed = parseURI(uri)
     if parsed['scheme'] == 'sqlite':
         return _makeSqlite(parsed)
@@ -88,6 +107,16 @@ def _insert(cursor, qry, params):
 def insert(runner, qry, params=()):
     """
     Run an INSERT-like query and return the id of the newly created row.
+
+    .. code-block:: python
+
+        runner = makePool('sqlite:')
+        runner.addCallback(insert, 'INSERT INTO foo (name) values (?)', ('joe',))
+
+    :param runner: An IRunner instance (like that returned by ``makePool``)
+    :param qry: An SQL string that causes an INSERT to happen (such as
+        ``"INSERT ..."`` or ``"REPLACE INTO ..."``)
+    :param params: Parameters to be interpolated into the query.
     """
     return runner.runInteraction(_insert, qry, params)
 
