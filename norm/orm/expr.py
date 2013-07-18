@@ -231,6 +231,22 @@ class Neq(Comparison):
     op = '!='
 
 
+class Gt(Comparison):
+    op = '>'
+
+
+class Gte(Comparison):
+    op = '>='
+
+
+class Lt(Comparison):
+    op = '<'
+
+
+class Lte(Comparison):
+    op = '<='
+
+
 @compiler.when(Comparison)
 def compile_Comparison(x, state):
     left, left_args = state.compile(x.left)
