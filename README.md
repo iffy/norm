@@ -190,7 +190,7 @@ from twisted.internet.task import react
 from twisted.internet import defer
 from norm import makePool, ormHandle
 from norm.orm.props import Int, Unicode
-from norm.orm.expr import Query, Eq
+from norm.orm.expr import Query
 from norm.patch import Patcher
 
 
@@ -294,20 +294,22 @@ def handleReady(handle):
     for book in books:
         print book.title
 
-    # build up the query little by little
-    query = Query(Author, Eq(Author.name, u'C. S. Lewis'))
-    query = query.find(Book, Eq(Author.id, Book.author_id))
-    query = query.find(BookCharacter, Eq(Book.id, BookCharacter.book_id))
-    query = query.find(Character, Eq(BookCharacter.character_id, Character.id))
+    # build up the query little by -- note that this is synchronous and doesn't
+    # touch the database until we run the query below.
+    query = Query(Author, Author.name == u'C. S. Lewis')
+    query = query.find(Book, Author.id == Book.author_id)
+    query = query.find(BookCharacter, Book.id == BookCharacter.book_id)
+    query = query.find(Character, BookCharacter.character_id == Character.id)
     chars = yield handle.query(query)
 
     names = set([x.name for x in chars])
     print names
     assert len(names) == 5, names
     
-    # find only the characters in the Dawn Treader (using previous query)
+    # find only the characters in the Dawn Treader (using previous query as
+    # a starting point)
     cs_lewis_dawn_treader = query.find(Character,
-        Eq(Book.title, u'The Voyage of the Dawn Treader'))
+        Book.title == u'The Voyage of the Dawn Treader')
 
     chars = yield handle.query(cs_lewis_dawn_treader)
     names = set([x.name for x in chars])

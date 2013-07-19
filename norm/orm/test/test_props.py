@@ -9,6 +9,7 @@ from norm.orm.base import Property
 from norm.orm.props import Int, Bool, Date, DateTime, String, Unicode
 
 
+
 class PropertyTestMixin(object):
 
     property_class = None

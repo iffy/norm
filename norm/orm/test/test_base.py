@@ -5,10 +5,16 @@ from twisted.trial.unittest import TestCase
 
 from norm.orm.base import (Property, classInfo, objectInfo, reconstitute,
                            Converter)
+from norm.orm.expr import Eq, Neq, Gt, Gte, Lt, Lte
 
 
 
 class PropertyTest(TestCase):
+
+
+    class Foo(object):
+        a = Property()
+        b = Property()
 
 
     def test_class(self):
@@ -130,6 +136,59 @@ class PropertyTest(TestCase):
                          "validator")
 
 
+    def test_eq(self):
+        c1 = self.Foo.a == self.Foo.b
+        self.assertTrue(isinstance(c1, Eq))
+        self.assertEqual(c1.left, self.Foo.a)
+        self.assertEqual(c1.right, self.Foo.b)
+
+        c2 = self.Foo.a == 12
+        self.assertEqual(c2.left, self.Foo.a)
+        self.assertEqual(c2.right, 12)
+
+        c3 = 12 == self.Foo.a
+        self.assertEqual(c2.left, 12)
+        self.assertEqual(c2.right, self.Foo.a)
+
+
+    def test_neq(self):
+        c1 = self.Foo.a != self.Foo.b
+        self.assertTrue(isinstance(c1, Neq))
+        self.assertEqual(c1.left, self.Foo.a)
+        self.assertEqual(c1.right, self.Foo.b)
+
+        c2 = self.Foo.a != True
+        self.assertEqual(c2.left, self.Foo.a)
+        self.assertEqual(c2.right, True)
+
+        c3 = False != self.Foo.b
+        self.assertEqual(c3.left, False)
+        self.assertEqual(c3.right, self.Foo.b)
+
+
+    def test_gt_lt(self):
+        c1 = self.Foo.a > self.Foo.b
+        self.assertTrue(isinstance(c1, Gt))
+        self.assertEqual(c1.left, self.Foo.a)
+        self.assertEqual(c1.right, self.Foo.b)
+
+        c2 = 12 > self.Foo.a
+        self.assertTrue(isinstance(c2, Lt))
+        self.assertEqual(c2.left, self.Foo.a)
+        self.assertEqual(c2.right, 12)
+
+        c3 = self.Foo.a >= self.Foo.b
+        self.assertTrue(isinstance(c3, Gte))
+        self.assertEqual(c3.left, self.Foo.a)
+        self.assertEqual(c3.right, self.Foo.b)
+
+        c4 = 12 >= self.Foo.a
+        self.assertTrue(isinstance(c4, Lte))
+        self.assertEqual(c4.left, self.Foo.a)
+        self.assertEqual(c4.right, 12)
+
+
+
 
 class classInfoTest(TestCase):
 
@@ -231,16 +290,18 @@ class objectInfoTest(TestCase):
         foo = Foo()
         info = objectInfo(foo)
         changed = info.changed()
-        self.assertEqual(changed, [])
+        self.assertEqual(changed, [], "Nothing has changed yet")
 
         foo.a = 'something'
-        self.assertEqual(info.changed(), [Foo.a])
+        self.assertEqual(info.changed(), [Foo.a], "Only Foo.a has changed")
 
         foo.b = 'another'
-        self.assertEqual(set(info.changed()), set([Foo.a, Foo.b]))
+        self.assertEqual(set(info.changed()), set([Foo.a, Foo.b]),
+                         "Both Foo.a and Foo.b have changed")
 
         info.resetChangedList()
-        self.assertEqual(info.changed(), [])
+        self.assertEqual(info.changed(), [], "Nothing has changed since "
+                         "the change list was cleared")
         
         foo.b = 'hey'
         self.assertEqual(info.changed(), [Foo.b])
@@ -257,8 +318,6 @@ class objectInfoTest(TestCase):
         info = objectInfo(foo)
         changed = info.changed()
         self.assertEqual(changed, [Foo.a])
-
-
 
 
 

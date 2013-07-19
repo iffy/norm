@@ -19,7 +19,7 @@ class Query(object):
     """
 
 
-    def __init__(self, select, constraints=None):
+    def __init__(self, select, *constraints):
         """
         @param select: Class(es) to return in the result.  This may either be
             a single class or a list/tuple of classes.
@@ -28,7 +28,10 @@ class Query(object):
         if type(select) not in (list, tuple):
             select = (select,)
         self.select = select
-        self.constraints = constraints
+        if constraints:
+            self.constraints = And(*constraints)
+        else:
+            self.constraints = None
         self._classes = []
         self._props = []
         self._process()
@@ -221,6 +224,10 @@ class Comparison(object):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
+
+    def __eq__(self, other):
+        print 'Comparison.__eq__', other
 
 
 class Eq(Comparison):

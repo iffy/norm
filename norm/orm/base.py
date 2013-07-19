@@ -11,8 +11,41 @@ from norm.orm.error import NotFound
 from norm.interface import IOperator
 
 
+class _Comparable(object):
 
-class Property(object):
+
+    def __eq__(self, other):
+        from norm.orm.expr import Eq
+        return Eq(self, other)
+
+
+    def __ne__(self, other):
+        from norm.orm.expr import Neq
+        return Neq(self, other)
+
+
+    def __gt__(self, other):
+        from norm.orm.expr import Gt
+        return Gt(self, other)
+
+
+    def __ge__(self, other):
+        from norm.orm.expr import Gte
+        return Gte(self, other)
+
+
+    def __lt__(self, other):
+        from norm.orm.expr import Lt
+        return Lt(self, other)
+
+
+    def __le__(self, other):
+        from norm.orm.expr import Lte
+        return Lte(self, other)
+
+
+
+class Property(_Comparable):
     """
     I am a property on a class that maps to database column.
 
@@ -121,8 +154,7 @@ class Property(object):
 
 
     def _markChanged(self, obj):
-        if self not in self.changes(obj):
-            self.changes(obj).append(self)
+        self.changes(obj).add(self)
 
 
     def changes(self, obj):
@@ -132,7 +164,9 @@ class Property(object):
         for prop in classInfo(obj).attributes.values():
             # this is so that default values are populated
             prop.valueFor(obj)
-        return self._changes.setdefault(obj, [])
+        if self._changes.get(obj, None) is None:
+            self._changes[obj] = set()
+        return self._changes[obj]
 
 
     def _cacheAttrName(self, cls):
@@ -226,10 +260,7 @@ class _ObjectInfo(object):
         self.obj = obj
 
 
-    def changed(self):
-        """
-        Get a list of properties on my object that have changed.
-        """
+    def _changed(self):
         cls_info = classInfo(self.obj)
         # XXX it's a little weird that you can get to this through any
         # attribute.
@@ -237,12 +268,19 @@ class _ObjectInfo(object):
         return prop.changes(self.obj)
 
 
+    def changed(self):
+        """
+        Get a list of properties on my object that have changed.
+        """
+        return list(self._changed())
+
+
     def resetChangedList(self):
         """
         Reset the changed status of all properties on my object so that an
         immediate call to L{changed} will return an empty list.
         """
-        changes = self.changed()
+        changes = self._changed()
         while changes:
             changes.pop()
 
