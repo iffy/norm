@@ -388,6 +388,32 @@ class FunctionalIOperatorTestsMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_query_And_default(self):
+        """
+        Constraints are Anded together by default (without needing to include
+        C{And})
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+        
+        e1 = Empty()
+        e1.name = '1'
+        yield pool.runInteraction(oper.insert, e1)
+
+        e2 = Empty()
+        e2.name = '2'
+        yield pool.runInteraction(oper.insert, e2)
+
+        query = Query(Empty, Empty.name == '1', Empty.id != None)
+        items = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(items), 1)
+        item = items[0]
+        
+        self.assertTrue(isinstance(item, Empty))
+        self.assertEqual(item.name, '1')
+
+
+    @defer.inlineCallbacks
     def test_refresh(self):
         """
         You can get an object by id

@@ -294,7 +294,8 @@ def handleReady(handle):
     for book in books:
         print book.title
 
-    # build up the query little by little
+    # build up the query little by -- note that this is synchronous and doesn't
+    # touch the database until we run the query below.
     query = Query(Author, Author.name == u'C. S. Lewis')
     query = query.find(Book, Author.id == Book.author_id)
     query = query.find(BookCharacter, Book.id == BookCharacter.book_id)
@@ -305,7 +306,8 @@ def handleReady(handle):
     print names
     assert len(names) == 5, names
     
-    # find only the characters in the Dawn Treader (using previous query)
+    # find only the characters in the Dawn Treader (using previous query as
+    # a starting point)
     cs_lewis_dawn_treader = query.find(Character,
         Book.title == u'The Voyage of the Dawn Treader')
 
