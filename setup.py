@@ -23,6 +23,7 @@ setup(
     version=getVersion(),
     packages=[
         'norm', 'norm.test',
+        'norm.orm', 'norm.orm.test',
     ],
     requires = [
         'Twisted',
