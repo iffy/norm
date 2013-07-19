@@ -16,8 +16,6 @@ class _Comparable(object):
 
     def __eq__(self, other):
         from norm.orm.expr import Eq
-        if self is other:
-            return True
         return Eq(self, other)
 
 

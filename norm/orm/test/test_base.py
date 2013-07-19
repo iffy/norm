@@ -141,8 +141,6 @@ class PropertyTest(TestCase):
         self.assertEqual(c1.left, Foo.a)
         self.assertEqual(c1.right, Foo.b)
 
-        self.assertEqual(Foo.a == Foo.a, True)
-
         c2 = Foo.a == 12
         self.assertEqual(c2.left, Foo.a)
         self.assertEqual(c2.right, 12)
