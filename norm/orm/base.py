@@ -11,8 +11,31 @@ from norm.orm.error import NotFound
 from norm.interface import IOperator
 
 
+class _Comparable(object):
+    
 
-class Property(object):
+    def __hash__(self):
+        print '__hash__(%r)' % (self,)
+        h = id(self)
+        print h
+        return h
+
+
+    def __eq__(self, other):
+        print '__eq__(%r, %r)' % (self, other)
+        from norm.orm.expr import Eq
+        r = Eq(self, other)
+        print r
+        return r
+
+
+    def __ne__(self, other):
+        print '__ne__(%r, %r)' % (self, other)
+        return True
+
+
+
+class Property(_Comparable):
     """
     I am a property on a class that maps to database column.
 
@@ -78,6 +101,8 @@ class Property(object):
 
 
     def _setValue(self, obj, value, record_change=True):
+        print ''
+        print '_setValue', self, value, record_change
         if not self.attr_name:
             self._cacheAttrName(obj.__class__)
         new_value = value
@@ -121,7 +146,15 @@ class Property(object):
 
 
     def _markChanged(self, obj):
+        print '/'*20
+        print '_markChanged', obj
+        print self.changes(obj)
+        print 'in %s' % (self in self.changes(obj),)
+        print 'not in %s' % (self not in self.changes(obj),)
+
+        print '-'*20
         if self not in self.changes(obj):
+            print 'setting changed', self, obj
             self.changes(obj).append(self)
 
 

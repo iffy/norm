@@ -5,6 +5,7 @@ from twisted.trial.unittest import TestCase
 
 from norm.orm.base import (Property, classInfo, objectInfo, reconstitute,
                            Converter)
+from norm.orm.expr import Eq
 
 
 
@@ -130,6 +131,23 @@ class PropertyTest(TestCase):
                          "validator")
 
 
+    def test_eq(self):
+        class Foo(object):
+            a = Property()
+            b = Property()
+
+        c1 = Foo.a == Foo.b
+        self.assertTrue(isinstance(c1, Eq))
+        self.assertEqual(c1.left, Foo.a)
+        self.assertEqual(c1.right, Foo.b)
+
+        self.assertEqual(Foo.a == Foo.a, True)
+
+        c2 = Foo.a == 12
+        self.assertEqual(c2.left, Foo.a)
+        self.assertEqual(c2.right, 12)
+
+
 
 class classInfoTest(TestCase):
 
@@ -234,10 +252,11 @@ class objectInfoTest(TestCase):
         self.assertEqual(changed, [])
 
         foo.a = 'something'
-        self.assertEqual(info.changed(), [Foo.a])
+        self.assertEqual(info.changed(), [Foo.a], "Only Foo.a has changed")
 
         foo.b = 'another'
-        self.assertEqual(set(info.changed()), set([Foo.a, Foo.b]))
+        self.assertEqual(set(info.changed()), set([Foo.a, Foo.b]),
+                         "Both Foo.a and Foo.b have changed")
 
         info.resetChangedList()
         self.assertEqual(info.changed(), [])
@@ -257,8 +276,6 @@ class objectInfoTest(TestCase):
         info = objectInfo(foo)
         changed = info.changed()
         self.assertEqual(changed, [Foo.a])
-
-
 
 
 

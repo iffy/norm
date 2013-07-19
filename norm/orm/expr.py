@@ -223,6 +223,10 @@ class Comparison(object):
         self.right = right
 
 
+    def __eq__(self, other):
+        print 'Comparison.__eq__', other
+
+
 class Eq(Comparison):
     op = '='
 
