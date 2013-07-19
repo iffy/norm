@@ -147,8 +147,8 @@ class PropertyTest(TestCase):
         self.assertEqual(c2.right, 12)
 
         c3 = 12 == self.Foo.a
-        self.assertEqual(c2.left, 12)
-        self.assertEqual(c2.right, self.Foo.a)
+        self.assertEqual(c3.left, 12)
+        self.assertEqual(c3.right, self.Foo.a)
 
 
     def test_neq(self):
