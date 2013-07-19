@@ -5,11 +5,16 @@ from twisted.trial.unittest import TestCase
 
 from norm.orm.base import (Property, classInfo, objectInfo, reconstitute,
                            Converter)
-from norm.orm.expr import Eq
+from norm.orm.expr import Eq, Neq, Gt, Gte, Lt, Lte
 
 
 
 class PropertyTest(TestCase):
+
+
+    class Foo(object):
+        a = Property()
+        b = Property()
 
 
     def test_class(self):
@@ -132,18 +137,56 @@ class PropertyTest(TestCase):
 
 
     def test_eq(self):
-        class Foo(object):
-            a = Property()
-            b = Property()
-
-        c1 = Foo.a == Foo.b
+        c1 = self.Foo.a == self.Foo.b
         self.assertTrue(isinstance(c1, Eq))
-        self.assertEqual(c1.left, Foo.a)
-        self.assertEqual(c1.right, Foo.b)
+        self.assertEqual(c1.left, self.Foo.a)
+        self.assertEqual(c1.right, self.Foo.b)
 
-        c2 = Foo.a == 12
-        self.assertEqual(c2.left, Foo.a)
+        c2 = self.Foo.a == 12
+        self.assertEqual(c2.left, self.Foo.a)
         self.assertEqual(c2.right, 12)
+
+        c3 = 12 == self.Foo.a
+        self.assertEqual(c2.left, 12)
+        self.assertEqual(c2.right, self.Foo.a)
+
+
+    def test_neq(self):
+        c1 = self.Foo.a != self.Foo.b
+        self.assertTrue(isinstance(c1, Neq))
+        self.assertEqual(c1.left, self.Foo.a)
+        self.assertEqual(c1.right, self.Foo.b)
+
+        c2 = self.Foo.a != True
+        self.assertEqual(c2.left, self.Foo.a)
+        self.assertEqual(c2.right, True)
+
+        c3 = False != self.Foo.b
+        self.assertEqual(c3.left, False)
+        self.assertEqual(c3.right, self.Foo.b)
+
+
+    def test_gt_lt(self):
+        c1 = self.Foo.a > self.Foo.b
+        self.assertTrue(isinstance(c1, Gt))
+        self.assertEqual(c1.left, self.Foo.a)
+        self.assertEqual(c1.right, self.Foo.b)
+
+        c2 = 12 > self.Foo.a
+        self.assertTrue(isinstance(c2, Lt))
+        self.assertEqual(c2.left, self.Foo.a)
+        self.assertEqual(c2.right, 12)
+
+        c3 = self.Foo.a >= self.Foo.b
+        self.assertTrue(isinstance(c3, Gte))
+        self.assertEqual(c3.left, self.Foo.a)
+        self.assertEqual(c3.right, self.Foo.b)
+
+        c4 = 12 >= self.Foo.a
+        self.assertTrue(isinstance(c4, Lte))
+        self.assertEqual(c4.left, self.Foo.a)
+        self.assertEqual(c4.right, 12)
+
 
 
 

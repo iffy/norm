@@ -19,6 +19,31 @@ class _Comparable(object):
         return Eq(self, other)
 
 
+    def __ne__(self, other):
+        from norm.orm.expr import Neq
+        return Neq(self, other)
+
+
+    def __gt__(self, other):
+        from norm.orm.expr import Gt
+        return Gt(self, other)
+
+
+    def __ge__(self, other):
+        from norm.orm.expr import Gte
+        return Gte(self, other)
+
+
+    def __lt__(self, other):
+        from norm.orm.expr import Lt
+        return Lt(self, other)
+
+
+    def __le__(self, other):
+        from norm.orm.expr import Lte
+        return Lte(self, other)
+
+
 
 class Property(_Comparable):
     """
