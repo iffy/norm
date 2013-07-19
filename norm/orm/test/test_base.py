@@ -249,7 +249,7 @@ class objectInfoTest(TestCase):
         foo = Foo()
         info = objectInfo(foo)
         changed = info.changed()
-        self.assertEqual(changed, [])
+        self.assertEqual(changed, [], "Nothing has changed yet")
 
         foo.a = 'something'
         self.assertEqual(info.changed(), [Foo.a], "Only Foo.a has changed")
@@ -259,7 +259,8 @@ class objectInfoTest(TestCase):
                          "Both Foo.a and Foo.b have changed")
 
         info.resetChangedList()
-        self.assertEqual(info.changed(), [])
+        self.assertEqual(info.changed(), [], "Nothing has changed since "
+                         "the change list was cleared")
         
         foo.b = 'hey'
         self.assertEqual(info.changed(), [Foo.b])
