@@ -136,6 +136,31 @@ class PropertyTest(TestCase):
                          "validator")
 
 
+    def test_validate_getValue(self):
+        """
+        You should be able to access the current value of a attribute from
+        within a validator
+        """
+        def changeB(prop, obj, value):
+            old_value = getattr(obj, 'a')
+            diff = value - old_value
+            obj.b += diff
+            return value
+
+
+        class Foo(object):
+            a = Property(default_factory=lambda:0, validators=[changeB])
+            b = Property(default_factory=lambda:0)
+
+        foo = Foo()
+        foo.b = 10
+        foo.a = 12
+        self.assertEqual(foo.b, 22)
+
+        foo.a = 10
+        self.assertEqual(foo.b, 20)
+
+
     def test_eq(self):
         c1 = self.Foo.a == self.Foo.b
         self.assertTrue(isinstance(c1, Eq))

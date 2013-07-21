@@ -131,7 +131,7 @@ class Property(_Comparable):
             if self._default_factory:
                 self._setValue(obj, self._default_factory())
             else:
-                self._setValue(obj, None, record_change=False)
+                values[self.attr_name] = None
             return values[self.attr_name]
 
 
