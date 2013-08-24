@@ -350,14 +350,14 @@ class FunctionalIOperatorTestsMixin(object):
         child.parent_id = parent.id
         yield pool.runInteraction(oper.insert, child)
 
-        p2 = yield pool.runInteraction(oper.insert, Parent())
+        yield pool.runInteraction(oper.insert, Parent())
 
         book = Book()
         book.name = u'Around the World in 80 Days'
         yield pool.runInteraction(oper.insert, book)
 
-        fav = yield pool.runInteraction(oper.insert,
-                                        FavoriteBook(child.id, book.id))
+        yield pool.runInteraction(oper.insert,
+                                  FavoriteBook(child.id, book.id))
         
         def q(query):
             return pool.runInteraction(oper.query, query)
