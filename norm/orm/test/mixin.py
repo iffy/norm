@@ -337,6 +337,58 @@ class FunctionalIOperatorTestsMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_query_buildLeftJoin(self):
+        """
+        You can build on to a left-joined query
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        
+        parent = yield pool.runInteraction(oper.insert, Parent())
+        child = Child(u'child')
+        child.parent_id = parent.id
+        yield pool.runInteraction(oper.insert, child)
+
+        p2 = yield pool.runInteraction(oper.insert, Parent())
+
+        book = Book()
+        book.name = u'Around the World in 80 Days'
+        yield pool.runInteraction(oper.insert, book)
+
+        fav = yield pool.runInteraction(oper.insert,
+                                        FavoriteBook(child.id, book.id))
+        
+        def q(query):
+            return pool.runInteraction(oper.query, query)
+
+        # single
+        query = Query(Parent, Parent.id != None)
+        rows = yield q(query)
+        self.assertEqual(len(rows), 2)
+
+        # left join
+        query = query.find(Child, joins=[
+                           LeftJoin(Child, Child.parent_id == Parent.id)])
+        rows = yield q(query)
+        self.assertEqual(len(rows), 2)
+        self.assertIn(None, rows, "Should have one null record")
+
+        # left join 2
+        query = query.find(FavoriteBook, joins=[
+                           LeftJoin(FavoriteBook, FavoriteBook.child_id == Child.id)])
+        rows = yield q(query)
+        self.assertEqual(len(rows), 2)
+        self.assertIn(None, rows, "Should have one null record")
+
+        # change select
+        query = query.find((Parent, FavoriteBook))
+        rows = yield q(query)
+        self.assertEqual(len(rows), 2)
+        self.assertIn(None, [x[1] for x in rows], "Should have null FavoriteBook")
+
+
+    @defer.inlineCallbacks
     def test_query_build(self):
         """
         You can build on to a query
@@ -413,6 +465,35 @@ class FunctionalIOperatorTestsMixin(object):
         self.assertEqual(len(rows), 1, "Just the one book still")
         row = rows[0]
         self.assertEqual(row.name, u'Around the World in 80 Days')
+
+
+    @defer.inlineCallbacks
+    def test_query_findChangeSelect(self):
+        """
+        You can change just the select portion of the query with find
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        p = Parent()
+        p.id = 2
+        yield pool.runInteraction(oper.insert, p)
+
+        c = Child()
+        c.id = 4
+        c.parent_id = 2
+        yield pool.runInteraction(oper.insert, c)
+
+        query = Query(Child, Parent.id == Child.parent_id,
+                             Parent.id == p.id)
+        items = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].id, 4)
+
+        query = query.find(Parent)
+        items = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].id, 2)
 
 
     @defer.inlineCallbacks

@@ -35,7 +35,7 @@ class Query(object):
             self.constraints = And(*constraints)
         else:
             self.constraints = None
-        self.joins = kwargs.pop('joins', [])
+        self.joins = kwargs.pop('joins', None) or []
         self._classes = []
         self._props = []
         self._process()
@@ -65,11 +65,16 @@ class Query(object):
         return self._classes
 
 
-    def find(self, select, constraints):
+    def find(self, select, constraints=None, joins=None):
         """
         Search for another kind of object with additional constraints.
         """
-        return Query(select, And(self.constraints, constraints))
+        if constraints:
+            constraints = And(self.constraints, constraints)
+        else:
+            constraints = self.constraints
+        joins = joins or []
+        return Query(select, constraints, joins=self.joins + joins)
 
 
 
@@ -179,7 +184,8 @@ def compile_Query(query, state):
 
     # remove those that are taken care of by a join
     for j in query.joins:
-        classes.remove(j.cls)
+        if j.cls in classes:
+            classes.remove(j.cls)
         s, a = state.compile(j)
         joins.append(s)
         join_args.extend(a)
