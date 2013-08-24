@@ -316,9 +316,15 @@ def reconstitute(data):
     ret = []
     for cls in classes:
         obj = cls.__new__(cls)
-        ret.append(obj)
+        vals = set()
         for prop, value in class_data[cls]:
+            vals.add(value)
             prop.fromDatabase(obj, value)
+        if vals == set([None]):
+            # No values, None (from a Left Join or the like)
+            ret.append(None)
+        else:
+            ret.append(obj)
 
     if len(ret) == 1:
         return ret[0]

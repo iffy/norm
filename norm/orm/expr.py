@@ -19,11 +19,14 @@ class Query(object):
     """
 
 
-    def __init__(self, select, *constraints):
+    def __init__(self, select, *constraints, **kwargs):
         """
         @param select: Class(es) to return in the result.  This may either be
             a single class or a list/tuple of classes.
         @param constraints: A L{Comparison} or other compileable expression.
+
+        @param kwargs:
+            joins
         """
         if type(select) not in (list, tuple):
             select = (select,)
@@ -32,6 +35,7 @@ class Query(object):
             self.constraints = And(*constraints)
         else:
             self.constraints = None
+        self.joins = kwargs.pop('joins', [])
         self._classes = []
         self._props = []
         self._process()
@@ -166,16 +170,27 @@ def compile_Query(query, state):
         where_clause = ['WHERE %s' % (s,)]
         where_args.extend(a)
 
-    # table
+    # from
     classes = [x for x in state.classes]
     from_args = []
     tables = []
+    joins = []
+    join_args  = []
+
+    # remove those that are taken care of by a join
+    for j in query.joins:
+        classes.remove(j.cls)
+        s, a = state.compile(j)
+        joins.append(s)
+        join_args.extend(a)
+
     for cls in classes:
         s, a = state.compile(Table(cls))
         tables.append(s)
         from_args.extend(a)
 
-    from_clause = ['FROM %s' % (','.join(tables))]
+    from_clause = ['FROM %s' % (','.join(tables)), ' '.join(joins)]
+    from_args.extend(join_args)
     
 
     sql = ' '.join(select_clause + from_clause + where_clause)
@@ -320,9 +335,17 @@ def compile_Joiner(x, state):
 
 class Join(object):
 
+    oper = 'JOIN'
+
     def __init__(self, cls, on):
         self.cls = cls
         self.on = on
+
+
+
+class LeftJoin(Join):
+
+    oper = 'LEFT JOIN'
 
 
 @compiler.when(Join)
@@ -330,7 +353,7 @@ def compile_Join(x, state):
     table = classInfo(x.cls).table
     alias = state.tableAlias(x.cls)
     on_sql, on_args = state.compile(x.on)
-    return ('JOIN %s AS %s ON %s' % (table, alias, on_sql), on_args)
+    return ('%s %s AS %s ON %s' % (x.oper, table, alias, on_sql), on_args)
 
 
 

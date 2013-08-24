@@ -8,7 +8,7 @@ from datetime import datetime, date
 
 from norm.interface import IOperator
 from norm.orm.props import Int, String, Unicode, Date, DateTime, Bool
-from norm.orm.expr import Query, Eq, And
+from norm.orm.expr import Query, Eq, And, LeftJoin
 from norm.orm.error import NotFound
 
 
@@ -273,6 +273,34 @@ class FunctionalIOperatorTestsMixin(object):
                     Eq(Parent.id,1))))
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].name, 'child1', "Should return the one child")
+
+
+    @defer.inlineCallbacks
+    def test_query_LeftJoin(self):
+        """
+        You can query across two tables with the a LEFT JOIN
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        p1 = Parent()
+        p1.id = 1
+        p2 = Parent()
+        p2.id = 2
+        c1 = Child(u'child1')
+        c1.parent_id = 1
+
+        for obj in [p1, p2, c1]:
+            yield pool.runInteraction(oper.insert, obj)
+        
+        items = yield pool.runInteraction(oper.query,
+                Query((Parent,Child), joins=[
+                      LeftJoin(Child, Child.parent_id == Parent.id)]))
+        self.assertEqual(len(items), 2)
+        self.assertEqual(items[0][0].id, 1)
+        self.assertEqual(items[0][1].name, 'child1')
+        self.assertEqual(items[1][0].id, 2)
+        self.assertEqual(items[1][1], None)
 
 
     @defer.inlineCallbacks
