@@ -360,6 +360,30 @@ class FunctionalIOperatorTestsMixin(object):
         self.assertEqual(len(results), 1)
         self.assertTrue(isinstance(results[0], Child))
 
+        # left join
+        query = Query(Parent).find(Child,
+                                   joins=[LeftJoin(Child,
+                                          Child.parent_id == Parent.id)])
+        results = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(results), 1)
+        self.assertTrue(isinstance(results[0], Child))
+
+
+    @defer.inlineCallbacks
+    def test_query_leftJoin_Parent_toParentChild(self):
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        parent = yield pool.runInteraction(oper.insert, Parent())
+        child = Child()
+        child.parent_id = parent.id
+        yield pool.runInteraction(oper.insert, child)
+
+        query = Query(Parent).find((Parent, Child),
+                        joins=[LeftJoin(Child, Child.parent_id == Parent.id)])
+        results = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(results), 1)
+
 
     @defer.inlineCallbacks
     def test_query_buildLeftJoin(self):

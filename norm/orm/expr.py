@@ -70,14 +70,8 @@ class Query(object):
         Search for another kind of object with additional constraints.
         """
         all_constraints = [x for x in [self.constraints, constraints] if x]
-        if len(all_constraints) > 1:
-            constraints = And(*all_constraints)
-        elif all_constraints:
-            constraints = all_constraints[0]
-        else:
-            constraints = None
         joins = joins or []
-        return Query(select, constraints, joins=self.joins + joins)
+        return Query(select, *all_constraints, joins=self.joins + joins)
 
 
 
@@ -179,19 +173,22 @@ def compile_Query(query, state):
         where_args.extend(a)
 
     # from
-    classes = [x for x in state.classes]
     from_args = []
     tables = []
     joins = []
     join_args  = []
+    join_classes = []
 
-    # remove those that are taken care of by a join
     for j in query.joins:
-        if j.cls in classes:
-            classes.remove(j.cls)
+        join_classes.append(j.cls)
         s, a = state.compile(j)
         joins.append(s)
         join_args.extend(a)
+
+    classes = [x for x in state.classes]
+    for j in join_classes:
+        if j in classes:
+            classes.remove(j)
 
     for cls in classes:
         s, a = state.compile(Table(cls))
