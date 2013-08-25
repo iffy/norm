@@ -3,5 +3,5 @@
 
 __all__ = ['__version__', 'makePool', 'insert', 'ormHandle']
 
-__version__ = '1.5.1'
+__version__ = '1.5.2'
 from norm.porcelain import makePool, insert, ormHandle
