@@ -337,6 +337,31 @@ class FunctionalIOperatorTestsMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_query_noConstraints(self):
+        """
+        You can query for an object with no constraints
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+
+        parent = yield pool.runInteraction(oper.insert, Parent())
+
+        query = Query(Parent)
+        results = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(results), 1)
+        self.assertTrue(isinstance(results[0], Parent))
+
+        # sub query
+        child = Child()
+        child.parent_id = parent.id
+        yield pool.runInteraction(oper.insert, child)
+        query = query.find(Child, Child.parent_id == Parent.id)
+        results = yield pool.runInteraction(oper.query, query)
+        self.assertEqual(len(results), 1)
+        self.assertTrue(isinstance(results[0], Child))
+
+
+    @defer.inlineCallbacks
     def test_query_buildLeftJoin(self):
         """
         You can build on to a left-joined query

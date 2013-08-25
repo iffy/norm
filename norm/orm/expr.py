@@ -69,10 +69,13 @@ class Query(object):
         """
         Search for another kind of object with additional constraints.
         """
-        if constraints:
-            constraints = And(self.constraints, constraints)
+        all_constraints = [x for x in [self.constraints, constraints] if x]
+        if len(all_constraints) > 1:
+            constraints = And(*all_constraints)
+        elif all_constraints:
+            constraints = all_constraints[0]
         else:
-            constraints = self.constraints
+            constraints = None
         joins = joins or []
         return Query(select, constraints, joins=self.joins + joins)
 
