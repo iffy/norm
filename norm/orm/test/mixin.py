@@ -10,6 +10,7 @@ from norm.interface import IOperator
 from norm.orm.props import Int, String, Unicode, Date, DateTime, Bool
 from norm.orm.expr import Query, Eq, And, LeftJoin
 from norm.orm.error import NotFound
+from norm import ormHandle
 
 
 
@@ -514,6 +515,44 @@ class FunctionalIOperatorTestsMixin(object):
         self.assertEqual(len(rows), 1, "Just the one book still")
         row = rows[0]
         self.assertEqual(row.name, u'Around the World in 80 Days')
+
+
+    @defer.inlineCallbacks
+    def test_query_buildLeftJoin_atTheEnd(self):
+        """
+        You should be able to successfully query
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+        handle = ormHandle(pool)
+
+        p1 = yield handle.insert(Parent())
+        p2 = yield handle.insert(Parent())
+
+        c1 = Child()
+        c1.parent_id = p1.id
+        yield handle.insert(c1)
+
+        c2 = Child()
+        c2.parent_id = p1.id
+        yield handle.insert(c2)
+
+        b1 = yield handle.insert(Book())
+        b2 = yield handle.insert(Book())
+
+        fav = yield handle.insert(FavoriteBook(c1.id, b1.id))
+
+        query = Query(Child,
+                      Child.parent_id == Parent.id,
+                      Parent.id == p1.id)
+        query = query.find(Child, Child.id == c1.id)
+        query = query.find(FavoriteBook, FavoriteBook.child_id == Child.id)
+        query = query.find((FavoriteBook, Book),
+                    joins=[LeftJoin(Book,
+                           FavoriteBook.book_id == Book.id)])
+
+        rows = yield pool.runInteraction(oper.query, query)
+        print rows
 
 
     @defer.inlineCallbacks
