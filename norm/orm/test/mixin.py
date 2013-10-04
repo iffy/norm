@@ -527,7 +527,7 @@ class FunctionalIOperatorTestsMixin(object):
         handle = ormHandle(pool)
 
         p1 = yield handle.insert(Parent())
-        p2 = yield handle.insert(Parent())
+        yield handle.insert(Parent())
 
         c1 = Child()
         c1.parent_id = p1.id
@@ -538,9 +538,9 @@ class FunctionalIOperatorTestsMixin(object):
         yield handle.insert(c2)
 
         b1 = yield handle.insert(Book())
-        b2 = yield handle.insert(Book())
+        yield handle.insert(Book())
 
-        fav = yield handle.insert(FavoriteBook(c1.id, b1.id))
+        yield handle.insert(FavoriteBook(c1.id, b1.id))
 
         query = Query(Child,
                       Child.parent_id == Parent.id,
