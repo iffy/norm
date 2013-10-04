@@ -179,11 +179,22 @@ def compile_Query(query, state):
     join_args  = []
     join_classes = []
 
-    for j in query.joins:
+    joins_per_table = defaultdict(lambda:[])
+
+    for j in query.joins:        
+        # figure out which tables are involved in this left join for a clue
+        # on where to put the left join.
+        tmp_state = State()
+        compiler.compile(j.on, tmp_state)
+        classes = tmp_state.classes
+        classes.remove(j.cls)
+        
         join_classes.append(j.cls)
         s, a = state.compile(j)
         joins.append(s)
         join_args.extend(a)
+
+        joins_per_table[classes[0]].append((j.cls,s,a))
 
     classes = [x for x in state.classes]
     for j in join_classes:
@@ -192,12 +203,20 @@ def compile_Query(query, state):
 
     for cls in classes:
         s, a = state.compile(Table(cls))
-        tables.append(s)
-        from_args.extend(a)
+        slist = [s]
+        alist = list(a)
+        classes_in_this_from = [cls]
+        while classes_in_this_from:
+            this_cls = classes_in_this_from.pop(0)
+            # append any joins that depend on this class
+            for jcls,js,ja in joins_per_table[this_cls]:
+                slist.append(js)
+                alist.extend(ja)
+                classes_in_this_from.append(jcls)
+        tables.append(' '.join(slist))
+        from_args.extend(alist)
 
-    from_clause = ['FROM %s' % (','.join(tables)), ' '.join(joins)]
-    from_args.extend(join_args)
-    
+    from_clause = ['FROM %s' % (','.join(tables)),]    
 
     sql = ' '.join(select_clause + from_clause + where_clause)
     args = tuple(select_args + from_args + where_args)

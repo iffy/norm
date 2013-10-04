@@ -552,7 +552,12 @@ class FunctionalIOperatorTestsMixin(object):
                            FavoriteBook.book_id == Book.id)])
 
         rows = yield pool.runInteraction(oper.query, query)
-        print rows
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(isinstance(rows[0][0], FavoriteBook))
+        self.assertEqual(rows[0][0].child_id, c1.id)
+        self.assertEqual(rows[0][0].book_id, b1.id)
+        self.assertTrue(isinstance(rows[0][1], Book))
+        self.assertEqual(rows[0][1].id, b1.id)
 
 
     @defer.inlineCallbacks
