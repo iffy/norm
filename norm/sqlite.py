@@ -61,6 +61,8 @@ toDB = Converter()
 @toDB.when(str)
 @toDB.when(String)
 def stringToDB(pythonval):
+    if pythonval is None:
+        return None
     return buffer(pythonval)
 
 

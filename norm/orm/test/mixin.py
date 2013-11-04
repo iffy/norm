@@ -114,6 +114,29 @@ class FunctionalIOperatorTestsMixin(object):
 
 
     @defer.inlineCallbacks
+    def test_insert_None(self):
+        """
+        You can set fields to None
+        """
+        oper = yield self.getOperator()
+        pool = yield self.getPool()
+        empty = Empty()
+        empty.name = None
+        empty.uni = None
+        empty.date = None
+        empty.dtime = None
+        empty.mybool = None
+
+        yield pool.runInteraction(oper.insert, empty)
+        self.assertNotEqual(empty.id, None)
+        self.assertEqual(empty.name, None)
+        self.assertEqual(empty.uni, None)
+        self.assertEqual(empty.date, None)
+        self.assertEqual(empty.dtime, None)
+        self.assertEqual(empty.mybool, None)
+
+
+    @defer.inlineCallbacks
     def test_insert_values(self):
         """
         You can insert into the database with some values
