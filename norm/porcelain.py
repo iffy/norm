@@ -43,26 +43,36 @@ def _makeBlockingPostgres(parsed, connections=1):
     import psycopg2
     from psycopg2.extras import DictCursor
     connstr = mkConnStr(parsed)
+
+    def connect():
+        return PostgresRunner(psycopg2.connect(connstr,
+                                               cursor_factory=DictCursor))
     pool = ConnectionPool()
     pool.db_scheme = 'postgres'
+    pool.setConnect(connect)
+
     for i in xrange(connections):
-        db = psycopg2.connect(connstr, cursor_factory=DictCursor)
-        runner = PostgresRunner(db)
-        pool.add(runner)
+        pool.add(connect())
     return defer.succeed(pool)
 
 
 def _makeTxPostgres(parsed, connections=1):
     from norm.tx_postgres import DictConnection
+    connstr = mkConnStr(parsed)
+
+    def connect():
+        conn = DictConnection()
+        d = conn.connect(connstr)
+        return d.addCallback(lambda _: conn)
+
     pool = ConnectionPool()
     pool.db_scheme = 'postgres'
-    connstr = mkConnStr(parsed)
+    pool.setConnect(connect)
 
     dlist = []
     for i in xrange(connections):
-        conn = DictConnection()
-        d = conn.connect(connstr)
-        d.addCallback(lambda _: pool.add(conn))
+        d = connect()
+        d.addCallback(pool.add)
         dlist.append(d)
     ret = defer.gatherResults(dlist)
     return ret.addCallback(lambda _: pool)

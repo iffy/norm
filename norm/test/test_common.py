@@ -187,9 +187,25 @@ class BlockingRunnerTest(TestCase):
 
 class ConnectionPoolTest(TestCase):
 
+    timeout = 2
 
     def test_IRunner(self):
         verifyObject(IRunner, ConnectionPool())
+
+
+    def test_setConnect(self):
+        """
+        You can tell the connection pool how to make connections.
+        """
+        called = []
+        def mkConnection(arg):
+            called.append(arg)
+            return 'connection'
+        pool = ConnectionPool()
+        pool.setConnect(mkConnection, 'foo')
+        d = pool.makeConnection()
+        self.assertEqual(self.successResultOf(d), 'connection')
+        self.assertEqual(called, ['foo'])
 
 
     def test_scheme(self):
@@ -295,6 +311,65 @@ class ConnectionPoolTest(TestCase):
         d.addCallback(lambda _: c2.close.assert_called_once_with())
         return d
 
+
+    @defer.inlineCallbacks
+    def test_reconnect(self):
+        """
+        If a query fails, make sure it wasn't just closed, reconnect and retry
+        if it was.
+        """
+        class BadConn(object):
+
+            def __init__(self):
+                self.called = []
+
+            def runQuery(self, *args):
+                self.called.append(args)
+                return defer.fail(Exception('foo'))
+
+        c1 = BadConn()
+
+        c2 = MagicMock()
+        c2.runQuery.return_value = defer.succeed('success')
+
+        pool = ConnectionPool()
+        pool.add(c1)
+        pool.setConnect(lambda:c2)
+
+        result = yield pool.runQuery('something', 'ran')
+        self.assertEqual(len(c1.called), 2)
+        self.assertIn(('something', 'ran'), c1.called)
+        c2.runQuery.assert_any_call('something', 'ran')
+        self.assertEqual(pool.pool.list(), [c2], "Should have the new conn "
+                         "in the pool")
+        self.assertEqual(result, 'success', "Should have eventually succeeded")
+
+
+    def test_reconnect_noConnectionMethod(self):
+        """
+        Reconnection is not possible is the setConnect method hasn't been
+        called.
+        """
+        exc = Exception('foo')
+
+        class BadConn(object):
+
+            def __init__(self):
+                self.called = []
+
+            def runQuery(self, *args):
+                self.called.append(args)
+                return defer.fail(exc)
+
+        c1 = BadConn()
+        pool = ConnectionPool()
+        pool.add(c1)
+
+        result = pool.runQuery('something', 'ran')
+
+        self.assertEqual(self.failureResultOf(result).value, exc)
+        self.assertEqual(len(c1.called), 1)
+        self.assertIn(('something', 'ran'), c1.called)
 
 
 class NextAvailablePoolTest(TestCase):

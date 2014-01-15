@@ -4,6 +4,8 @@
 from zope.interface import implements
 from twisted.internet import defer
 
+from functools import partial
+
 from collections import deque, defaultdict
 
 from norm.interface import IAsyncCursor, IRunner, IPool
@@ -111,6 +113,22 @@ class ConnectionPool(object):
 
     def __init__(self, pool=None):
         self.pool = pool or NextAvailablePool()
+        self._makeConnection = None
+
+
+    def setConnect(self, func, *args, **kwargs):
+        """
+        Set the function to be called to make a db connection.
+        """
+        self._makeConnection = partial(func, *args, **kwargs)
+
+
+    def makeConnection(self):
+        """
+        Using the function previously set with L{setConnect}, make a new
+        connection.
+        """
+        return defer.maybeDeferred(self._makeConnection)
 
 
     def add(self, conn):
@@ -143,7 +161,49 @@ class ConnectionPool(object):
     def _startRunWithConn(self, conn, name, *args, **kwargs):
         m = getattr(conn, name)
         d = m(*args, **kwargs)
+        if self._makeConnection:
+            d.addErrback(self._retryOnDisconnect, conn, name, args, kwargs)
         return d.addBoth(self._finish, conn)
+
+
+    def _retryOnDisconnect(self, failure, conn, name, args, kwargs):
+        """
+        XXX UNTESTED
+        """
+        # check if it's the connection
+        d = conn.runQuery('select 1')
+        d.addCallbacks(
+            self._connectionTestSucceeded,
+            self._connectionTestFailed,
+            callbackArgs=(failure,),
+            errbackArgs=(conn, name, args, kwargs, failure),
+        )
+        return d
+
+
+    def _connectionTestSucceeded(self, result, original_failure):
+        """
+        The connection is good; fail like you were going to.
+        """
+        return original_failure
+
+
+    @defer.inlineCallbacks
+    def _connectionTestFailed(self, result, bad_conn, name, args, kwargs,
+                              original_failure):
+        """
+        The connection is bad, try the query again.
+        """
+        retval = original_failure
+        try:
+            new_conn = yield self.makeConnection()
+            m = getattr(new_conn, name)
+            retval = yield m(*args, **kwargs)
+            self.pool.remove(bad_conn)
+            self.pool.add(new_conn)
+        except:
+            pass
+        defer.returnValue(retval)
 
 
     def close(self):
@@ -204,6 +264,7 @@ class NextAvailablePool(object):
         if option in self._pending_removal:
             dlist = self._pending_removal.pop(option)
             map(lambda d: d.callback(option), dlist)
+            self._all_options.remove(option)
             return
         self._options.append(option)
         self._fulfillNextPending()
