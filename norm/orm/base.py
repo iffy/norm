@@ -316,11 +316,12 @@ def reconstitute(data):
     ret = []
     for cls in classes:
         obj = cls.__new__(cls)
-        vals = set()
+        empty_obj = True
         for prop, value in class_data[cls]:
-            vals.add(value)
+            if empty_obj and value is not None:
+                empty_obj = False
             prop.fromDatabase(obj, value)
-        if vals == set([None]):
+        if empty_obj:
             # No values, None (from a Left Join or the like)
             ret.append(None)
         else:
