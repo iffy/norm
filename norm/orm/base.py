@@ -1,7 +1,7 @@
 # Copyright (c) Matt Haggard.
 # See LICENSE for details.
 
-from collections import defaultdict
+from collections import defaultdict, MutableMapping
 import inspect
 import weakref
 
@@ -44,6 +44,37 @@ class _Comparable(object):
         return Lte(self, other)
 
 
+class _WeakIdentityDict(MutableMapping):
+    def __init__(self):
+        def remove(k, selfref=weakref.ref(self)):
+            self = selfref()
+            if self is not None:
+                del self.data[k.key]
+        self._remove = remove
+        self.data = {}
+
+    def __delitem__(self, key):
+        del self.data[id(key)]
+
+    def __getitem__(self, key):
+        return self.data[id(key)][1]
+
+    def __setitem__(self, key, value):
+        wr = weakref.KeyedRef(key, self._remove, id(key))
+        self.data[id(key)] = (wr, value)
+
+    def __contains__(self, key):
+        return id(key) in self.data
+
+    def __iter__(self):
+        for item in self.data.itervalues():
+            obj = item[0]()
+            if obj is not None:
+                yield obj
+
+    def __len__(self):
+        return len(iter(self))
+
 
 class Property(_Comparable):
     """
@@ -55,8 +86,8 @@ class Property(_Comparable):
     @ivar cls: The Class I live on.
     """
 
-    _value_dict = weakref.WeakKeyDictionary()
-    _changes = weakref.WeakKeyDictionary()
+    _value_dict = _WeakIdentityDict()
+    _changes = _WeakIdentityDict()
     attr_name = None
     cls = None
     primary = False

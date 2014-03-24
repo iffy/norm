@@ -188,6 +188,20 @@ class PropertyTest(TestCase):
         self.assertEqual(c4.right, 12)
 
 
+    def test_nonRecursiveHash(self):
+        """
+        Hashable objects should not recurse forever.
+        """
+        class A(object):
+            id = Property()
+
+            def __hash__(self):
+                return hash(self.id)
+
+        # in the failure case, this will cause a recursion error.
+        hash(A())
+
+
 
 
 class classInfoTest(TestCase):
